@@ -1,6 +1,6 @@
 slk = require "slk"
 
-local tempData = {}
+local slkHashData = {}
 
 HLUA_SLK_KEYS = {
     COMMON = 99,
@@ -16,7 +16,7 @@ HLUA_SLK_KEYS = {
     UNIT_HERO_TAVERN = 110,
     UNIT_HERO_TAVERN_TOKEN = 111,
     UNIT_HERO_DEATH_TOKEN = 112,
-    ITEM_MOMENT = 113,
+    ITEM_FLEETING = 113,
     ATTR_STR_GREEN_ADD = 114,
     ATTR_STR_GREEN_SUB = 115,
     ATTR_AGI_GREEN_ADD = 116,
@@ -71,7 +71,7 @@ obj.nsight = 0
 obj.Builds = ""
 obj.upgrades = ""
 table.insert(
-    tempData,
+    slkHashData,
     {
         HLUA_SLK_KEYS.COMMON,
         HLUA_SLK_KEYS.UNIT_TOKEN,
@@ -106,7 +106,7 @@ obj.nsight = 250
 obj.Builds = ""
 obj.upgrades = ""
 table.insert(
-    tempData,
+    slkHashData,
     {
         HLUA_SLK_KEYS.COMMON,
         HLUA_SLK_KEYS.UNIT_TOKEN_LEAP,
@@ -144,7 +144,7 @@ obj.red = 255
 obj.blue = 0
 obj.green = 0
 table.insert(
-    tempData,
+    slkHashData,
     {
         HLUA_SLK_KEYS.COMMON,
         HLUA_SLK_KEYS.UNIT_TOKEN_ALERT_CIRCLE,
@@ -177,7 +177,7 @@ obj.nsight = 0
 obj.Builds = ""
 obj.upgrades = ""
 table.insert(
-    tempData,
+    slkHashData,
     {
         HLUA_SLK_KEYS.COMMON,
         HLUA_SLK_KEYS.UNIT_TREE,
@@ -211,7 +211,7 @@ obj.targs1 = "item,nonhero"
 obj.Cost1 = 0
 obj.Rng1 = 30.00
 table.insert(
-    tempData,
+    slkHashData,
     {
         HLUA_SLK_KEYS.COMMON,
         HLUA_SLK_KEYS.SKILL_ITEM_SEPARATE,
@@ -243,7 +243,7 @@ for dur = 1, 10, 1 do
     obj.Cost1 = 0
     obj.Rng1 = 9999.00
     table.insert(
-        tempData,
+        slkHashData,
         {
             HLUA_SLK_KEYS.SKILL_BREAK,
             dur,
@@ -275,7 +275,7 @@ obj.HeroDur1 = 0.000
 obj.Cost1 = 0
 obj.Rng1 = 9999.00
 table.insert(
-    tempData,
+    slkHashData,
     {
         HLUA_SLK_KEYS.COMMON,
         HLUA_SLK_KEYS.SKILL_SWIM_UNLIMIT,
@@ -297,7 +297,7 @@ obj.race = "other"
 obj.Dur1 = 0
 obj.HeroDur1 = 0
 table.insert(
-    tempData,
+    slkHashData,
     {
         HLUA_SLK_KEYS.COMMON,
         HLUA_SLK_KEYS.SKILL_INVISIBLE,
@@ -315,31 +315,31 @@ obj.DataB1 = 4
 obj.DataC1 = 0
 obj.DataD1 = 0
 obj.Rng1 = 900.00
+TAVERN_SELECTION_OBJ_ID = obj:get_id()
 table.insert(
-    tempData,
+    slkHashData,
     {
         HLUA_SLK_KEYS.COMMON,
         HLUA_SLK_KEYS.SKILL_HERO_TAVERN_SELECTION,
-        obj:get_id(),
+        TAVERN_SELECTION_OBJ_ID,
         "int"
     }
 )
 
 -- #酒馆演示 tavern
-local aid = obj:get_id()
 obj = slk.unit.ntav:new("unit_hero_tavern")
 obj.EditorSuffix = "#h-lua"
 obj.Name = "英雄系统 酒馆"
-obj.abilList = "Avul,Asud," .. aid
+obj.abilList = "Avul,Asud," .. TAVERN_SELECTION_OBJ_ID
 obj.Sellunits = ""
 obj.pathTex = ""
 obj.collision = ""
-obj.modelScale = 0.60
-obj.scale = 2.00
+obj.modelScale = 0.80
+obj.scale = 2.80
 obj.uberSplat = ""
 obj.teamColor = 12
 table.insert(
-    tempData,
+    slkHashData,
     {
         HLUA_SLK_KEYS.COMMON,
         HLUA_SLK_KEYS.UNIT_HERO_TAVERN,
@@ -372,7 +372,7 @@ obj.nsight = 1250
 obj.Builds = ""
 obj.upgrades = ""
 table.insert(
-    tempData,
+    slkHashData,
     {
         HLUA_SLK_KEYS.COMMON,
         HLUA_SLK_KEYS.UNIT_HERO_TAVERN_TOKEN,
@@ -415,7 +415,7 @@ obj.nsight = 250
 obj.Builds = ""
 obj.upgrades = ""
 table.insert(
-    tempData,
+    slkHashData,
     {
         HLUA_SLK_KEYS.COMMON,
         HLUA_SLK_KEYS.UNIT_HERO_DEATH_TOKEN,
@@ -425,14 +425,9 @@ table.insert(
 )
 
 -- #地上自动捡拾物
-local item_moments = {
+local itemFleeting = {
     { Name = "金币", file = "Objects\\InventoryItems\\PotofGold\\PotofGold.mdl", modelScale = 1.00, moveHeight = -30 },
-    {
-        Name = "木材",
-        file = "Objects\\InventoryItems\\BundleofLumber\\BundleofLumber.mdl",
-        modelScale = 1.00,
-        moveHeight = -30
-    },
+    { Name = "木材", file = "Objects\\InventoryItems\\BundleofLumber\\BundleofLumber.mdl", modelScale = 1.00, moveHeight = -30 },
     { Name = "黄色书", file = "Objects\\InventoryItems\\tomeBrown\\tomeBrown.mdl", modelScale = 1.00, moveHeight = -20 },
     { Name = "绿色书", file = "Objects\\InventoryItems\\tomeGreen\\tomeGreen.mdl", modelScale = 1.00, moveHeight = -20 },
     { Name = "紫色书", file = "Objects\\InventoryItems\\tome\\tome.mdl", modelScale = 1.00, moveHeight = -20 },
@@ -440,26 +435,21 @@ local item_moments = {
     { Name = "红色书", file = "Objects\\InventoryItems\\tomeRed\\tomeRed.mdl", modelScale = 1.00, moveHeight = -20 },
     { Name = "神符", file = "Objects\\InventoryItems\\runicobject\\runicobject.mdl", modelScale = 0.80, moveHeight = -10 },
     { Name = "浮雕", file = "Objects\\InventoryItems\\Glyph\\Glyph.mdl", modelScale = 0.60, moveHeight = 0 },
-    {
-        Name = "蛋",
-        file = "Objects\\InventoryItems\\ThunderLizardEgg\\ThunderLizardEgg.mdl",
-        modelScale = 1.30,
-        moveHeight = 20
-    },
+    { Name = "蛋", file = "Objects\\InventoryItems\\ThunderLizardEgg\\ThunderLizardEgg.mdl", modelScale = 1.30, moveHeight = 20 },
     { Name = "碎片", file = "Objects\\InventoryItems\\CrystalShard\\CrystalShard.mdl", modelScale = 1.00, moveHeight = -20 },
     { Name = "问号", file = "Objects\\InventoryItems\\QuestionMark\\QuestionMark.mdl", modelScale = 0.60, moveHeight = 0 },
     { Name = "荧光草", file = "Objects\\InventoryItems\\Shimmerweed\\Shimmerweed.mdl", modelScale = 0.80, moveHeight = 0 },
-    { Name = "Dota2赏金符", file = "war3mapImported\\Dota2.Runes.Bounty.mdl", modelScale = 0.80, moveHeight = -10 },
-    { Name = "Dota2伤害符", file = "war3mapImported\\Dota2.Runes.DoubleDamage.mdl", modelScale = 0.80, moveHeight = -10 },
-    { Name = "Dota2恢复符", file = "war3mapImported\\Dota2.Runes.Regeneration.mdl", modelScale = 0.80, moveHeight = -10 },
-    { Name = "Dota2极速符", file = "war3mapImported\\Dota2.Runes.Haste.mdl", modelScale = 0.80, moveHeight = -10 },
-    { Name = "Dota2幻象符", file = "war3mapImported\\Dota2.Runes.Illusion.mdl", modelScale = 0.80, moveHeight = -10 },
-    { Name = "Dota2隐身符", file = "war3mapImported\\Dota2.Runes.Invisibility.mdl", modelScale = 0.80, moveHeight = -10 }
+    { Name = "Dota2赏金符", file = "war3mapImported\\item_Dota2.Runes.Bounty.mdl", modelScale = 0.80, moveHeight = -10 },
+    { Name = "Dota2伤害符", file = "war3mapImported\\item_Dota2.Runes.DoubleDamage.mdl", modelScale = 0.80, moveHeight = -10 },
+    { Name = "Dota2恢复符", file = "war3mapImported\\item_Dota2.Runes.Regeneration.mdl", modelScale = 0.80, moveHeight = -10 },
+    { Name = "Dota2极速符", file = "war3mapImported\\item_Dota2.Runes.Haste.mdl", modelScale = 0.80, moveHeight = -10 },
+    { Name = "Dota2幻象符", file = "war3mapImported\\item_Dota2.Runes.Illusion.mdl", modelScale = 0.80, moveHeight = -10 },
+    { Name = "Dota2隐身符", file = "war3mapImported\\item_Dota2.Runes.Invisibility.mdl", modelScale = 0.80, moveHeight = -10 }
 }
-local itemMomentsLen = 0
-for k, v in ipairs(item_moments) do
-    itemMomentsLen = itemMomentsLen + 1
-    obj = slk.unit.ogru:new("item_moment_" .. v.Name)
+local itemFleetingLen = 0
+for k, v in ipairs(itemFleeting) do
+    itemFleetingLen = itemFleetingLen + 1
+    obj = slk.unit.ogru:new("item_fleeting_" .. v.Name)
     obj.EditorSuffix = "#h-lua"
     obj.Name = "瞬逝物系统 " .. v.Name
     obj.special = 1
@@ -480,9 +470,9 @@ for k, v in ipairs(item_moments) do
     obj.sight = 0
     obj.nsight = 0
     table.insert(
-        tempData,
+        slkHashData,
         {
-            HLUA_SLK_KEYS.ITEM_MOMENT,
+            HLUA_SLK_KEYS.ITEM_FLEETING,
             k,
             obj:get_id(),
             "int"
@@ -490,11 +480,11 @@ for k, v in ipairs(item_moments) do
     )
 end
 table.insert(
-    tempData,
+    slkHashData,
     {
-        HLUA_SLK_KEYS.ITEM_MOMENT,
+        HLUA_SLK_KEYS.ITEM_FLEETING,
         -1,
-        itemMomentsLen,
+        itemFleetingLen,
         "int"
     }
 )
@@ -518,7 +508,7 @@ for i = 1, 9 do
         obj["DataD" .. (j + 1)] = 1
     end
     table.insert(
-        tempData,
+        slkHashData,
         {
             HLUA_SLK_KEYS.ATTR_STR_GREEN_ADD,
             val,
@@ -542,7 +532,7 @@ for i = 1, 9 do
         obj["DataD" .. (j + 1)] = 1
     end
     table.insert(
-        tempData,
+        slkHashData,
         {
             HLUA_SLK_KEYS.ATTR_STR_GREEN_SUB,
             val,
@@ -566,7 +556,7 @@ for i = 1, 9 do
         obj["DataD" .. (j + 1)] = 1
     end
     table.insert(
-        tempData,
+        slkHashData,
         {
             HLUA_SLK_KEYS.ATTR_AGI_GREEN_ADD,
             val,
@@ -590,7 +580,7 @@ for i = 1, 9 do
         obj["DataD" .. (j + 1)] = 1
     end
     table.insert(
-        tempData,
+        slkHashData,
         {
             HLUA_SLK_KEYS.ATTR_AGI_GREEN_SUB,
             val,
@@ -614,7 +604,7 @@ for i = 1, 9 do
         obj["DataD" .. (j + 1)] = 1
     end
     table.insert(
-        tempData,
+        slkHashData,
         {
             HLUA_SLK_KEYS.ATTR_INT_GREEN_ADD,
             val,
@@ -638,7 +628,7 @@ for i = 1, 9 do
         obj["DataD" .. (j + 1)] = 1
     end
     table.insert(
-        tempData,
+        slkHashData,
         {
             HLUA_SLK_KEYS.ATTR_INT_GREEN_SUB,
             val,
@@ -656,7 +646,7 @@ for i = 1, 9 do
         obj["DataA" .. (j + 1)] = 1 * val * j
     end
     table.insert(
-        tempData,
+        slkHashData,
         {
             HLUA_SLK_KEYS.ATTR_ATTACK_GREEN_ADD,
             val,
@@ -674,7 +664,7 @@ for i = 1, 9 do
         obj["DataA" .. (j + 1)] = -1 * val * j
     end
     table.insert(
-        tempData,
+        slkHashData,
         {
             HLUA_SLK_KEYS.ATTR_ATTACK_GREEN_SUB,
             val,
@@ -692,7 +682,7 @@ for i = 1, 9 do
     obj.CasterArt = ""
     obj.Casterattach = ""
     table.insert(
-        tempData,
+        slkHashData,
         {
             HLUA_SLK_KEYS.ATTR_ATTACK_WHITE_ADD,
             val,
@@ -715,7 +705,7 @@ for i = 1, 9 do
     obj.stockRegen = 0
     obj.cooldownID = ""
     table.insert(
-        tempData,
+        slkHashData,
         {
             HLUA_SLK_KEYS.ATTR_ITEM_ATTACK_WHITE_ADD,
             val,
@@ -733,7 +723,7 @@ for i = 1, 9 do
     obj.CasterArt = ""
     obj.Casterattach = ""
     table.insert(
-        tempData,
+        slkHashData,
         {
             HLUA_SLK_KEYS.ATTR_ATTACK_WHITE_SUB,
             val,
@@ -756,7 +746,7 @@ for i = 1, 9 do
     obj.stockRegen = 0
     obj.cooldownID = ""
     table.insert(
-        tempData,
+        slkHashData,
         {
             HLUA_SLK_KEYS.ATTR_ITEM_ATTACK_WHITE_SUB,
             val,
@@ -774,7 +764,7 @@ for i = 1, 9 do
         obj["DataA" .. (j + 1)] = 0.01 * val * j
     end
     table.insert(
-        tempData,
+        slkHashData,
         {
             HLUA_SLK_KEYS.ATTR_ATTACK_SPEED_ADD,
             val,
@@ -792,7 +782,7 @@ for i = 1, 9 do
         obj["DataA" .. (j + 1)] = -0.01 * val * j
     end
     table.insert(
-        tempData,
+        slkHashData,
         {
             HLUA_SLK_KEYS.ATTR_ATTACK_SPEED_SUB,
             val,
@@ -810,7 +800,7 @@ for i = 1, 9 do
         obj["DataA" .. (j + 1)] = 1 * val * j
     end
     table.insert(
-        tempData,
+        slkHashData,
         {
             HLUA_SLK_KEYS.ATTR_DEFEND_ADD,
             val,
@@ -828,7 +818,7 @@ for i = 1, 9 do
         obj["DataA" .. (j + 1)] = -1 * val * j
     end
     table.insert(
-        tempData,
+        slkHashData,
         {
             HLUA_SLK_KEYS.ATTR_DEFEND_SUB,
             val,
@@ -845,7 +835,7 @@ for i = 1, 9 do
     obj["DataA1"] = 0
     obj["DataA2"] = -1 * val
     table.insert(
-        tempData,
+        slkHashData,
         {
             HLUA_SLK_KEYS.ATTR_MANA_ADD,
             val,
@@ -862,7 +852,7 @@ for i = 1, 9 do
     obj["DataA1"] = 0
     obj["DataA2"] = 1 * val
     table.insert(
-        tempData,
+        slkHashData,
         {
             HLUA_SLK_KEYS.ATTR_MANA_SUB,
             val,
@@ -879,7 +869,7 @@ for i = 1, 9 do
     obj["DataA1"] = 0
     obj["DataA2"] = -1 * val
     table.insert(
-        tempData,
+        slkHashData,
         {
             HLUA_SLK_KEYS.ATTR_LIFE_ADD,
             val,
@@ -896,7 +886,7 @@ for i = 1, 9 do
     obj["DataA1"] = 0
     obj["DataA2"] = 1 * val
     table.insert(
-        tempData,
+        slkHashData,
         {
             HLUA_SLK_KEYS.ATTR_LIFE_SUB,
             val,
@@ -915,7 +905,7 @@ obj.levels = 2
 obj.DataA1 = 0
 obj.DataA2 = -10000000
 table.insert(
-    tempData,
+    slkHashData,
     {
         HLUA_SLK_KEYS.COMMON,
         HLUA_SLK_KEYS.ATTR_AVOID_ADD,
@@ -931,7 +921,7 @@ obj.levels = 2
 obj.DataA1 = 0
 obj.DataA2 = 10000000
 table.insert(
-    tempData,
+    slkHashData,
     {
         HLUA_SLK_KEYS.COMMON,
         HLUA_SLK_KEYS.ATTR_AVOID_SUB,
@@ -954,7 +944,7 @@ while (i <= 10000) do
         obj.levels = 1
         obj["DataA1"] = 1 * v
         table.insert(
-            tempData,
+            slkHashData,
             {
                 HLUA_SLK_KEYS.ATTR_SIGHT_ADD,
                 v,
@@ -970,7 +960,7 @@ while (i <= 10000) do
         obj.levels = 1
         obj["DataA1"] = -1 * v
         table.insert(
-            tempData,
+            slkHashData,
             {
                 HLUA_SLK_KEYS.ATTR_SIGHT_SUB,
                 v,
@@ -1160,7 +1150,7 @@ for k, v in ipairs(envs) do
     obj.nsight = 0
     obj.hideOnMinimap = 1
     table.insert(
-        tempData,
+        slkHashData,
         {
             HLUA_SLK_KEYS.ENV_MODEL_NAME,
             k,
@@ -1169,7 +1159,7 @@ for k, v in ipairs(envs) do
         }
     )
     table.insert(
-        tempData,
+        slkHashData,
         {
             HLUA_SLK_KEYS.ENV_MODEL,
             k,
@@ -1179,7 +1169,7 @@ for k, v in ipairs(envs) do
     )
 end
 table.insert(
-    tempData,
+    slkHashData,
     {
         HLUA_SLK_KEYS.COMMON,
         HLUA_SLK_KEYS.ENV_MODEL,
@@ -1198,7 +1188,7 @@ local re = slkHelper.shapeshift(
     }
 )
 table.insert(
-    tempData,
+    slkHashData,
     {
         HLUA_SLK_KEYS.EX_SHAPESHIFT,
         1,
@@ -1207,7 +1197,7 @@ table.insert(
     }
 )
 table.insert(
-    tempData,
+    slkHashData,
     {
         HLUA_SLK_KEYS.EX_SHAPESHIFT,
         2,
@@ -1216,7 +1206,7 @@ table.insert(
     }
 )
 table.insert(
-    tempData,
+    slkHashData,
     {
         HLUA_SLK_KEYS.EX_SHAPESHIFT,
         3,

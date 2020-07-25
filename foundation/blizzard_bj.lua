@@ -287,8 +287,7 @@ bj.GetCurrentCameraBoundsMapRectBJ = function()
     return cj.Rect(cj.GetCameraBoundMinX(), cj.GetCameraBoundMinY(), cj.GetCameraBoundMaxX(), cj.GetCameraBoundMaxY())
 end
 
-bj_mapInitialPlayableArea =
-    cj.Rect(
+bj_mapInitialPlayableArea = cj.Rect(
     cj.GetCameraBoundMinX() - cj.GetCameraMargin(CAMERA_MARGIN_LEFT),
     cj.GetCameraBoundMinY() - cj.GetCameraMargin(CAMERA_MARGIN_BOTTOM),
     cj.GetCameraBoundMaxX() + cj.GetCameraMargin(CAMERA_MARGIN_RIGHT),

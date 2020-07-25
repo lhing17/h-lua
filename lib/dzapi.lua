@@ -1,7 +1,12 @@
 hdzapi = {
-    enable = false,
+    enable = (cg.HLUA_DZAPI_FLAG == true),
+    tips_showed = false,
     commandHashCache = {},
     mallItemCheater = {},
+    tallocStatus = {
+        index = 0,
+        queue = {},
+    },
     ---@private
     commandHash = function(command)
         if (hdzapi.commandHashCache[command] == nil) then
@@ -10,60 +15,93 @@ hdzapi = {
         return hdzapi.commandHashCache[command]
     end,
     ---@private
+    talloc = function()
+        local index = -1
+        local i = hdzapi.tallocStatus.index + 1
+        if (i > cg.Hlua_DzAPI_Tgr_count) then
+            i = 1
+        end
+        if (hdzapi.tallocStatus.queue[i] == nil) then
+            hdzapi.tallocStatus.queue[i] = {
+                status = false,
+                result = nil
+            }
+        end
+        if (hdzapi.tallocStatus.queue[i].status == false) then
+            index = i
+        else
+            for j = 1, cg.Hlua_DzAPI_Tgr_count do
+                if (hdzapi.tallocStatus.queue[j].status == false) then
+                    index = j
+                    break
+                end
+            end
+        end
+        if (index == -1) then
+            print_err("Need more DZapi trigger")
+            return
+        end
+        hdzapi.tallocStatus.queue[index].status = true
+        hdzapi.tallocStatus.queue[index].result = nil
+        return cg['Hlua_DzAPI_Tgr_' .. index], index
+    end,
+    ---@private
     exec = function(command, ...)
         if (hdzapi.enable ~= true) then
-            print_err("Please copy ./plugin/dzapi.jass")
+            if (hdzapi.tips_showed == false) then
+                print("Copy ./plugin/dzapi.jass For Dzapi.lua")
+                hdzapi.tips_showed = true
+            end
             return
         end
         local whichPlayer = select("1", ...)
         local key = select("2", ...)
         local data = select("3", ...)
-        if (whichPlayer == nil) then
+        if (whichPlayer ~= nil and his.playing(whichPlayer) == false) then
             return
         end
-        if (his.playing(whichPlayer) == false) then
-            return
+        local tgr, tIndex = hdzapi.talloc()
+        local tid = cj.GetHandleId(tgr)
+        cj.SaveStr(cg.hash_hlua_dzapi, tid, cg.HLDK_COMMAND, command)
+        if (whichPlayer ~= nil) then
+            cj.SavePlayerHandle(cg.hash_hlua_dzapi, tid, cg.HLDK_PLAYER, whichPlayer)
         end
-        cj.SavePlayerHandle(cg.hash_hlua_dzapi, hdzapi.commandHash(command), cg.HLDK_PLAYER, whichPlayer)
         if (key ~= nil) then
-            cj.SaveStr(cg.hash_hlua_dzapi, hdzapi.commandHash(command), cg.HLDK_KEY, key)
+            cj.SaveStr(cg.hash_hlua_dzapi, tid, cg.HLDK_KEY, key)
         end
         if (data ~= nil) then
-            cj.SaveStr(cg.hash_hlua_dzapi, hdzapi.commandHash(command), cg.HLDK_DATA, data)
+            cj.SaveStr(cg.hash_hlua_dzapi, tid, cg.HLDK_DATA, data)
         end
-        cj.ExecuteFunc(command)
-        local res = cj.LoadStr(cg.hash_hlua_dzapi, hdzapi.commandHash(command), cg.HLDK_RESULT)
+        cj.TriggerExecute(tgr)
+        local res = cj.LoadStr(cg.hash_hlua_dzapi, tid, cg.HLDK_RESULT)
+        hdzapi.tallocStatus.queue[tIndex].status = false
+        hdzapi.tallocStatus.queue[tIndex].command = command
+        hdzapi.tallocStatus.queue[tIndex].result = res
         if (type(res) == "string") then
             return res
         end
     end
 }
 
---- 初始化
----@private
-hdzapi.init = function()
-    hdzapi.enable = true
-end
-
 --- 是否红V
 ---@param whichPlayer userdata
 ---@return boolean
 hdzapi.isVipRed = function(whichPlayer)
-    return hdzapi.exec("Hlua_DzAPI_Map_IsRedVIP", whichPlayer) == "1"
+    return hdzapi.exec("IsRedVIP", whichPlayer) == "1"
 end
 
 --- 是否蓝V
 ---@param whichPlayer userdata
 ---@return boolean
 hdzapi.isVipBlue = function(whichPlayer)
-    return hdzapi.exec("Hlua_DzAPI_Map_IsBlueVIP", whichPlayer) == "1"
+    return hdzapi.exec("IsBlueVIP", whichPlayer) == "1"
 end
 
 --- 获取地图等级
 ---@param whichPlayer userdata
 ---@return number
 hdzapi.mapLv = function(whichPlayer)
-    local lv = hdzapi.exec("Hlua_DzAPI_Map_GetMapLevel", whichPlayer)
+    local lv = hdzapi.exec("GetMapLevel", whichPlayer)
     if (lv == nil or lv == "") then
         lv = 1
     else
@@ -87,7 +125,7 @@ hdzapi.hasMallItem = function(whichPlayer, key)
         return true
     end
     key = string.upper(key)
-    return hdzapi.exec("Hlua_DzAPI_Map_HasMallItem", whichPlayer, key) == "1"
+    return hdzapi.exec("HasMallItem", whichPlayer, key) == "1"
 end
 
 --- 设置一个玩家为特殊商城人员，可以获得所有的道具
@@ -99,14 +137,14 @@ hdzapi.setMallItemCheater = function(whichPlayer)
     hdzapi.mallItemCheater[whichPlayer] = true
 end
 
---- 服务器存档
+-- 服务器存档
 hdzapi.server = {}
 
 --- 读取服务器存档是否成功，没有开通或这服务器崩了返回false
 ---@param whichPlayer userdata
 ---@return boolean
 hdzapi.server.ready = function(whichPlayer)
-    return hdzapi.exec("Hlua_DzAPI_GetPlayerServerValueSuccess", whichPlayer) == "1"
+    return hdzapi.exec("GetPlayerServerValueSuccess", whichPlayer) == "1"
 end
 
 --- 设置房间数据
@@ -115,7 +153,7 @@ end
 ---@param text string
 hdzapi.setRoomStat = function(whichPlayer, key, text)
     if (hdzapi.server.ready(whichPlayer) == true) then
-        hdzapi.exec("Hlua_DzAPI_Map_Stat_SetStat", whichPlayer, tostring(key), tostring(text))
+        hdzapi.exec("Stat_SetStat", whichPlayer, tostring(key), tostring(text))
     end
 end
 
@@ -125,25 +163,42 @@ hdzapi.server.save = function(whichPlayer, key, data)
         return
     end
     if (hdzapi.server.ready(whichPlayer) == true) then
-        hdzapi.exec("Hlua_DzAPI_Map_SaveServerValue", whichPlayer, key, tostring(data))
+        hdzapi.exec("SaveServerValue", whichPlayer, key, tostring(data))
     end
 end
 
 ---@private
 hdzapi.server.load = function(whichPlayer, key)
     if (hdzapi.server.ready(whichPlayer) == true) then
-        return hdzapi.exec("Hlua_DzAPI_Map_GetServerValue", whichPlayer, key)
+        return hdzapi.exec("GetServerValue", whichPlayer, key)
     end
 end
 
--- 清理服务器存档数据
+--- 清理服务器存档数据
 ---@param whichPlayer userdata
 ---@param key string
-hdzapi.server.clear = function(whichPlayer, key)
-    if (hdzapi.server.ready(whichPlayer) == true) then
-        hdzapi.exec("Hlua_DzAPI_Map_SaveServerValue", whichPlayer, key, "")
+hdzapi.server.clear = {
+    int = function(whichPlayer, key)
+        hdzapi.server.save(whichPlayer, "I" .. key, "")
+    end,
+    real = function(whichPlayer, key)
+        hdzapi.server.save(whichPlayer, "R" .. key, "")
+    end,
+    bool = function(whichPlayer, key)
+        hdzapi.server.save(whichPlayer, "B" .. key, "")
+    end,
+    str = function(whichPlayer, key)
+        hdzapi.server.save(whichPlayer, "S" .. key, "")
+    end,
+    unit = function(whichPlayer, key)
+        hdzapi.server.save(whichPlayer, "S" .. key, "")
+    end,
+    item = function(whichPlayer, key)
+        hdzapi.server.save(whichPlayer, "S" .. key, "")
     end
-end
+}
+
+hdzapi.server.save(whichPlayer, key, "")
 
 --- 封装的服务器存档 get / set
 hdzapi.server.set = {

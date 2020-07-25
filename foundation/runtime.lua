@@ -2,18 +2,49 @@ hRuntime = {
     -- 注册runtime的数据
     register = {
         unit = function(json)
-            hslk_global.unitsKV[json.UNIT_ID] = json
+            hslk_global.id2Value.unit[json.UNIT_ID] = json
+            hslk_global.name2Value.unit[json.Name] = json
+            if (json.ID_ARRAY ~= nil) then
+                if (hslk_global.id_array.unit[json.ID_ARRAY] == nil) then
+                    hslk_global.id_array.unit[json.ID_ARRAY] = {}
+                end
+                table.insert(hslk_global.id_array.unit[json.ID_ARRAY], json.UNIT_ID)
+            end
         end,
         item = function(json)
-            hslk_global.itemsKV[json.ITEM_ID] = json
+            hslk_global.id2Value.item[json.ITEM_ID] = json
+            hslk_global.name2Value.item[json.Name] = json
             if (type(json.SHADOW_ID) == "string") then
-                hslk_global.itemsShadowKV[json.ITEM_ID] = json.SHADOW_ID
-                hslk_global.itemsFaceKV[json.SHADOW_ID] = json.ITEM_ID
+                hslk_global.items_shadow_mapping[json.ITEM_ID] = json.SHADOW_ID
+                hslk_global.items_shadow_mapping[json.SHADOW_ID] = json.ITEM_ID
+            end
+            if (json.ID_ARRAY ~= nil) then
+                if (hslk_global.id_array.item[json.ID_ARRAY] == nil) then
+                    hslk_global.id_array.item[json.ID_ARRAY] = {}
+                end
+                table.insert(hslk_global.id_array.item[json.ID_ARRAY], json.ITEM_ID)
             end
         end,
         ability = function(json)
-            hslk_global.abilitiesKV[json.ABILITY_ID] = json
-        end
+            hslk_global.id2Value.ability[json.ABILITY_ID] = json
+            hslk_global.name2Value.ability[json.Name] = json
+            if (json.ID_ARRAY ~= nil) then
+                if (hslk_global.id_array.ability[json.ID_ARRAY] == nil) then
+                    hslk_global.id_array.ability[json.ID_ARRAY] = {}
+                end
+                table.insert(hslk_global.id_array.ability[json.ID_ARRAY], json.ABILITY_ID)
+            end
+        end,
+        technology = function(json)
+            hslk_global.id2Value.technology[json.TECHNOLOGY_ID] = json
+            hslk_global.name2Value.technology[json.Name] = json
+            if (json.ID_ARRAY ~= nil) then
+                if (hslk_global.id_array.technology[json.ID_ARRAY] == nil) then
+                    hslk_global.id_array.technology[json.ID_ARRAY] = {}
+                end
+                table.insert(hslk_global.id_array.technology[json.ID_ARRAY], json.TECHNOLOGY_ID)
+            end
+        end,
     },
     is = {},
     sound = {},
@@ -24,14 +55,17 @@ hRuntime = {
         register = {},
         -- 池
         pool = {},
-        -- 额外的触发管理
-        trigger = {},
     },
     textTag = {},
     rect = {},
     player = {},
     unit = {},
+    group = {}, -- 单位选择器
     hero = {},
+    unit_type_ids = { --单位类型ID集
+        hero = {},
+        courier_hero = {},
+    },
     heroBuildSelection = {},
     skill = {
         silentUnits = {},
@@ -41,28 +75,12 @@ hRuntime = {
     },
     attribute = {},
     attributeDiff = {},
+    attributeBeDamaging = {},
     attributeDamaging = {},
     attributeGroup = {
         life_back = {},
         mana_back = {},
         punish = {}
-    },
-    attributeThreeBuff = {
-        -- 每一点三围对属性的影响，默认会写一些，可以通过 hattr.setThreeBuff 方法来改变系统构成
-        -- 需要注意的是三围只能影响common内的大部分参数，natural及effect是无效的
-        str = {
-            life = 10, -- 每点力量提升10生命（默认例子）
-            life_back = 0.1 -- 每点力量提升0.1生命恢复（默认例子）
-        },
-        agi = {
-            attack_white = 1, -- 每点敏捷提升1白字攻击（默认例子）
-            defend = 0.01 -- 每点敏捷提升0.01护甲（默认例子）
-        },
-        int = {
-            attack_green = 1, -- 每点智力提升1绿字攻击（默认例子）
-            mana = 6, -- 每点智力提升6魔法（默认例子）
-            mana_back = 0.05 -- 每点力量提升0.05生命恢复（默认例子）
-        }
     },
     item = {},
     itemPickPool = {},
@@ -92,18 +110,6 @@ hRuntime.clear = function(handle)
     end
     if (hRuntime.event.register[handle] ~= nil) then
         hRuntime.event.register[handle] = nil
-    end
-    if (hRuntime.event.trigger[handle] ~= nil) then
-        local keys = {
-            CONST_EVENT.enterUnitRange,
-        }
-        for _, s in ipairs(keys) do
-            if (hRuntime.event.trigger[handle][s] ~= nil) then
-                cj.DisableTrigger(hRuntime.event.trigger[handle][s])
-                cj.DestroyTrigger(hRuntime.event.trigger[handle][s])
-            end
-        end
-        hRuntime.event.trigger[handle] = nil
     end
     if (hRuntime.event.pool[handle] ~= nil) then
         for _, p in ipairs(hRuntime.event.pool[handle]) do
@@ -140,6 +146,9 @@ hRuntime.clear = function(handle)
     end
     if (hRuntime.unit[handle] ~= nil) then
         hRuntime.unit[handle] = nil
+    end
+    if (table.includes(handle, hRuntime.group)) then
+        table.delete(handle, hRuntime.group)
     end
     if (hRuntime.hero[handle] ~= nil) then
         hRuntime.hero[handle] = nil

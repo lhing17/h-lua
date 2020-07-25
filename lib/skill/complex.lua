@@ -221,11 +221,9 @@ hskill.split = function(options)
                         }
                     )
                 end
-            end
+            end,
+            true
         )
-        cj.GroupClear(g)
-        cj.DestroyGroup(g)
-        g = nil
         -- @触发分裂事件
         hevent.triggerEvent(
             sourceUnit,
@@ -291,8 +289,8 @@ hskill.broken = function(options)
             register = false,
             unitId = hskill.SKILL_TOKEN,
             whichPlayer = hplayer.player_passive,
-            x = cj.GetUnitX(u),
-            y = cj.GetUnitY(u)
+            x = hunit.x(u),
+            y = hunit.y(u)
         }
     )
     cj.UnitAddAbility(cu, hskill.SKILL_BREAK[0.05])
@@ -378,7 +376,7 @@ hskill.swim = function(options)
     local damageString = "眩晕"
     local damageStringColor = "4169E1"
     local swimTimer = hskill.get(u, "swimTimer")
-    if (swimTimer ~= nil and htime.getRemainTime(t) > 0) then
+    if (swimTimer ~= nil and htime.getRemainTime(swimTimer) > 0) then
         if (during <= htime.getRemainTime(swimTimer)) then
             return
         else
@@ -394,8 +392,8 @@ hskill.swim = function(options)
             register = false,
             unitId = hskill.SKILL_TOKEN,
             whichPlayer = hplayer.player_passive,
-            x = cj.GetUnitX(u),
-            y = cj.GetUnitY(u)
+            x = hunit.x(u),
+            y = hunit.y(u)
         }
     )
     --判断during的时候是否小于0.5秒，使用眩晕0.05-0.5的技能，大于0.5使用无限眩晕法
@@ -980,9 +978,9 @@ hskill.lightningChain = function(options)
     if (options.qty > 0) then
         if (isRepeat ~= true) then
             if (options.repeatGroup == nil) then
-                options.repeatGroup = cj.CreateGroup()
+                options.repeatGroup = {}
             end
-            cj.GroupAddUnit(options.repeatGroup, whichUnit)
+            hgroup.addUnit(options.repeatGroup, whichUnit)
         end
         local g = hgroup.createByUnit(
             whichUnit,
@@ -1001,7 +999,7 @@ hskill.lightningChain = function(options)
                 if (his.unit(whichUnit, filterUnit)) then
                     flag = false
                 end
-                if (isRepeat ~= true and hgroup.isIn(options.repeatGroup, filterUnit)) then
+                if (isRepeat ~= true and hgroup.includes(options.repeatGroup, filterUnit)) then
                     flag = false
                 end
                 return flag
@@ -1010,12 +1008,11 @@ hskill.lightningChain = function(options)
         if (hgroup.isEmpty(g)) then
             return
         end
-        options.whichUnit = hgroup.getClosest(g, cj.GetUnitX(whichUnit), cj.GetUnitY(whichUnit))
+        options.whichUnit = hgroup.getClosest(g, hunit.x(whichUnit), hunit.y(whichUnit))
         options.damage = options.damage * (1 + change)
         options.prevUnit = whichUnit
         options.odds = 9999 --闪电链只要开始能延续下去就是100%几率了
-        cj.GroupClear(g)
-        cj.DestroyGroup(g)
+        hgroup.clear(g, true, false)
         if (options.damage > 0) then
             htime.setTimeout(
                 0.35,
@@ -1027,8 +1024,7 @@ hskill.lightningChain = function(options)
         end
     else
         if (options.repeatGroup ~= nil) then
-            cj.GroupClear(options.repeatGroup)
-            cj.DestroyGroup(options.repeatGroup)
+            options.repeatGroup = nil
         end
     end
 end
@@ -1082,7 +1078,7 @@ hskill.crackFly = function(options)
     end
     his.set(options.whichUnit, "isCrackFly", true)
     --镜头放大模式下，距离缩小一半
-    if (hcamera.getModel(cj.GetOwningPlayer(options.whichUnit)) == "zoomin") then
+    if (hcamera.getModel(hunit.getOwner(options.whichUnit)) == "zoomin") then
         distance = distance * 0.5
         high = high * 0.5
     end
@@ -1180,14 +1176,14 @@ hskill.crackFly = function(options)
                 z = high / (during * 0.35 / timerSetTime)
                 if (dist > 0) then
                     local pxy = math.polarProjection(
-                        cj.GetUnitX(options.whichUnit),
-                        cj.GetUnitY(options.whichUnit),
+                        hunit.x(options.whichUnit),
+                        hunit.y(options.whichUnit),
                         dist,
                         originDeg
                     )
                     cj.SetUnitFacing(options.whichUnit, originFacing)
                     if (his.borderMap(pxy.x, pxy.y) == false) then
-                        cj.SetUnitPosition(options.whichUnit, pxy.x, pxy.y)
+                        hunit.portal(options.whichUnit, pxy.x, pxy.y)
                     end
                 end
                 if (z > 0) then
@@ -1198,13 +1194,15 @@ hskill.crackFly = function(options)
                 z = high / (during * 0.65 / timerSetTime)
                 if (dist > 0) then
                     local pxy = math.polarProjection(
-                        cj.GetUnitX(options.whichUnit),
-                        cj.GetUnitY(options.whichUnit),
+                        hunit.x(options.whichUnit),
+                        hunit.y(options.whichUnit),
                         dist,
                         originDeg
                     )
                     cj.SetUnitFacing(options.whichUnit, originFacing)
-                    cj.SetUnitPosition(options.whichUnit, pxy.x, pxy.y)
+                    if (his.borderMap(pxy.x, pxy.y) == false) then
+                        hunit.portal(options.whichUnit, pxy.x, pxy.y)
+                    end
                 end
                 if (z > 0) then
                     cj.SetUnitFlyHeight(options.whichUnit, cj.GetUnitFlyHeight(options.whichUnit) - z, z / timerSetTime)
@@ -1247,8 +1245,8 @@ hskill.rangeSwim = function(options)
         x = options.x
         y = options.y
     elseif (options.whichUnit ~= nil) then
-        x = cj.GetUnitX(options.whichUnit)
-        y = cj.GetUnitY(options.whichUnit)
+        x = hunit.x(options.whichUnit)
+        y = hunit.y(options.whichUnit)
     elseif (options.whichLoc ~= nil) then
         x = cj.GetLocatonX(options.whichLoc)
         y = cj.GetLocatonY(options.whichLoc)
@@ -1357,7 +1355,7 @@ hskill.whirlwind = function(options)
                 return
             end
             if (options.animation) then
-                cj.SetUnitAnimation(options.sourceUnit, options.animation)
+                hunit.animate(options.sourceUnit, options.animation)
             end
             local g = hgroup.createByUnit(options.sourceUnit, range, filter)
             if (g == nil) then
@@ -1457,7 +1455,7 @@ hskill.leap = function(options)
     local tokenArrowOpacity = options.tokenArrowOpacity or 1.00
     local tokenArrowHeight = options.tokenArrowHeight or 0
     local oneHitOnly = options.oneHitOnly or false
-    --这里要注意：targetUnit的优先级是比xy高的!
+    --这里要注意：targetUnit比xy优先
     local leapType
     local initFacing = 0
     if (options.arrowUnit ~= nil) then
@@ -1468,21 +1466,21 @@ hskill.leap = function(options)
     if (options.targetUnit ~= nil) then
         initFacing = math.getDegBetweenUnit(prevUnit, options.targetUnit)
     elseif (options.x ~= nil and options.y ~= nil) then
-        initFacing = math.getDegBetweenXY(cj.GetUnitX(prevUnit), cj.GetUnitY(prevUnit), options.x, options.y)
+        initFacing = math.getDegBetweenXY(hunit.x(prevUnit), hunit.y(prevUnit), options.x, options.y)
     else
         print_err("leapType: -unknow")
         return
     end
     local repeatGroup
-    if (damageMovement > 0 and damageMovementRepeat == false) then
-        repeatGroup = cj.CreateGroup()
+    if (damageMovement > 0 and damageMovementRepeat ~= true) then
+        repeatGroup = {}
     end
     if (arrowUnit == nil) then
-        local cxy = math.polarProjection(cj.GetUnitX(prevUnit), cj.GetUnitY(prevUnit), 100, initFacing)
+        local cxy = math.polarProjection(hunit.x(prevUnit), hunit.y(prevUnit), 100, initFacing)
         arrowUnit = hunit.create(
             {
                 register = false,
-                whichPlayer = cj.GetOwningPlayer(sourceUnit),
+                whichPlayer = hunit.getOwner(sourceUnit),
                 unitId = hskill.SKILL_LEAP,
                 x = cxy.x,
                 y = cxy.y,
@@ -1512,22 +1510,20 @@ hskill.leap = function(options)
     htime.setInterval(
         frequency,
         function(t)
-            local ax = cj.GetUnitX(arrowUnit)
-            local ay = cj.GetUnitY(arrowUnit)
+            local ax = hunit.x(arrowUnit)
+            local ay = hunit.y(arrowUnit)
             if (his.death(sourceUnit)) then
                 htime.delTimer(t)
                 if (tempEffectArrow ~= nil) then
                     heffect.del(tempEffectArrow)
                 end
                 if (repeatGroup ~= nil) then
-                    cj.GroupClear(repeatGroup)
-                    cj.DestroyGroup(repeatGroup)
                     repeatGroup = nil
                 end
                 if (leapType == "unit") then
                     hunit.setInvulnerable(arrowUnit, false)
                     cj.SetUnitPathing(arrowUnit, true)
-                    cj.SetUnitVertexColor(arrowUnit, 255, 255, 255, 1)
+                    cj.SetUnitVertexColor(arrowUnit, 255, 255, 255, 255)
                 else
                     hunit.kill(arrowUnit, 0)
                 end
@@ -1539,21 +1535,25 @@ hskill.leap = function(options)
             local tx = 0
             local ty = 0
             if (options.targetUnit ~= nil) then
-                tx = cj.GetUnitX(options.targetUnit)
-                ty = cj.GetUnitY(options.targetUnit)
+                tx = hunit.x(options.targetUnit)
+                ty = hunit.y(options.targetUnit)
             else
                 tx = options.x
                 ty = options.y
             end
             local fac = math.getDegBetweenXY(ax, ay, tx, ty)
             local txy = math.polarProjection(ax, ay, speed, fac)
-            cj.SetUnitPosition(arrowUnit, txy.x, txy.y)
+            if (acceleration ~= 0) then
+                speed = speed + acceleration
+            end
+            if (his.borderMap(txy.x, txy.y) == false) then
+                hunit.portal(arrowUnit, txy.x, txy.y)
+            else
+                speed = 0
+            end
             cj.SetUnitFacing(arrowUnit, fac)
             if (options.effectMovement ~= nil) then
                 heffect.toXY(options.effectMovement, txy.x, txy.y, 0)
-            end
-            if (acceleration ~= 0) then
-                speed = speed + acceleration
             end
             if (damageMovementRange > 0) then
                 local g = hgroup.createByUnit(
@@ -1561,7 +1561,7 @@ hskill.leap = function(options)
                     damageMovementRange,
                     function(filterUnit)
                         local flag = filter(filterUnit)
-                        if (damageMovementRepeat ~= true and hgroup.isIn(repeatGroup, filterUnit)) then
+                        if (damageMovementRepeat ~= true and hgroup.includes(repeatGroup, filterUnit)) then
                             flag = false
                         end
                         return flag
@@ -1574,7 +1574,7 @@ hskill.leap = function(options)
                     hgroup.loop(
                         g,
                         function(eu)
-                            if (damageMovementRepeat ~= true) then
+                            if (damageMovementRepeat ~= true and repeatGroup ~= nil) then
                                 hgroup.addUnit(repeatGroup, eu)
                             end
                             if (damageMovement > 0) then
@@ -1590,7 +1590,7 @@ hskill.leap = function(options)
                                 )
                             end
                             if (damageMovementDrag == true) then
-                                cj.SetUnitPosition(eu, txy.x, txy.y)
+                                hunit.portal(eu, txy.x, txy.y)
                             end
                             if (type(extraInfluence) == "function") then
                                 extraInfluence(eu)
@@ -1600,15 +1600,13 @@ hskill.leap = function(options)
                     )
                 end
             end
-            local distance = math.getDistanceBetweenXY(cj.GetUnitX(arrowUnit), cj.GetUnitY(arrowUnit), tx, ty)
+            local distance = math.getDistanceBetweenXY(hunit.x(arrowUnit), hunit.y(arrowUnit), tx, ty)
             if (distance <= speed or speed <= 0 or his.death(arrowUnit) == true) then
                 htime.delTimer(t)
                 if (tempEffectArrow ~= nil) then
                     heffect.del(tempEffectArrow)
                 end
                 if (repeatGroup ~= nil) then
-                    cj.GroupClear(repeatGroup)
-                    cj.DestroyGroup(repeatGroup)
                     repeatGroup = nil
                 end
                 if (options.effectEnd ~= nil) then
@@ -1657,8 +1655,8 @@ hskill.leap = function(options)
                 if (leapType == "unit") then
                     hunit.setInvulnerable(arrowUnit, false)
                     cj.SetUnitPathing(arrowUnit, true)
-                    cj.SetUnitVertexColor(arrowUnit, 255, 255, 255, 1)
-                    cj.SetUnitPosition(arrowUnit, txy.x, txy.y)
+                    cj.SetUnitVertexColor(arrowUnit, 255, 255, 255, 255)
+                    hunit.portal(arrowUnit, txy.x, txy.y)
                 else
                     hunit.kill(arrowUnit, 0)
                 end
@@ -1703,14 +1701,14 @@ hskill.leapPow = function(options)
     end
     local x, y
     if (options.targetUnit ~= nil) then
-        x = cj.GetUnitX(options.targetUnit)
-        y = cj.GetUnitY(options.targetUnit)
+        x = hunit.x(options.targetUnit)
+        y = hunit.y(options.targetUnit)
     else
         x = options.x
         y = options.y
     end
-    local sx = cj.GetUnitX(options.sourceUnit)
-    local sy = cj.GetUnitY(options.sourceUnit)
+    local sx = hunit.x(options.sourceUnit)
+    local sy = hunit.y(options.sourceUnit)
     local facing = math.getDegBetweenXY(sx, sy, x, y)
     local distance = math.getDistanceBetweenXY(sx, sy, x, y)
     local firstDeg = facing + (deg * (qty - 1) * 0.5)
@@ -1779,8 +1777,8 @@ hskill.leapRange = function(options)
     local filter = options.filter
     local x, y
     if (options.targetUnit ~= nil) then
-        x = cj.GetUnitX(options.targetUnit)
-        y = cj.GetUnitY(options.targetUnit)
+        x = hunit.x(options.targetUnit)
+        y = hunit.y(options.targetUnit)
         options.x = nil
         options.y = nil
     else
@@ -1819,8 +1817,8 @@ hskill.leapRange = function(options)
             if (options.targetUnit ~= nil) then
                 tmp.targetUnit = eu
             else
-                tmp.x = cj.GetUnitX(eu)
-                tmp.y = cj.GetUnitY(eu)
+                tmp.x = hunit.x(eu)
+                tmp.y = hunit.y(eu)
             end
             hskill.leap(tmp)
         end,
@@ -1932,7 +1930,7 @@ hskill.rectangleStrike = function(options)
     end
     if (frequency <= 0) then
         local i = 0
-        local tg = cj.CreateGroup()
+        local tg = {}
         while (true) do
             i = i + 1
             local d = i * range * 0.33
@@ -1961,8 +1959,8 @@ hskill.rectangleStrike = function(options)
             hgroup.loop(
                 hgroup.createByXY(txy.x, txy.y, range, options.filter),
                 function(eu)
-                    if (hgroup.isIn(tg, eu) == false) then
-                        cj.GroupAddUnit(tg, eu)
+                    if (hgroup.includes(tg, eu) == false) then
+                        hgroup.addUnit(tg, eu)
                     end
                 end,
                 true
@@ -1983,8 +1981,7 @@ hskill.rectangleStrike = function(options)
                 }
             )
         end
-        cj.GroupClear(tg)
-        cj.DestroyGroup(tg)
+        tg = nil
     else
         local i = 0
         htime.setInterval(
@@ -2031,8 +2028,7 @@ hskill.rectangleStrike = function(options)
                         }
                     )
                 end
-                cj.GroupClear(g)
-                cj.DestroyGroup(g)
+                g = nil
             end
         )
     end

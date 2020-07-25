@@ -12,7 +12,7 @@ local HSK = {
     UNIT_HERO_TAVERN = 110,
     UNIT_HERO_TAVERN_TOKEN = 111,
     UNIT_HERO_DEATH_TOKEN = 112,
-    ITEM_MOMENT = 113,
+    ITEM_FLEETING = 113,
     ATTR_STR_GREEN_ADD = 114,
     ATTR_STR_GREEN_SUB = 115,
     ATTR_AGI_GREEN_ADD = 116,
@@ -43,7 +43,7 @@ local HSK = {
 }
 
 hslk_global = {
-    item_moment = {},
+    item_fleeting = {},
     env_model = {},
     skill_item_separate = 0,
     skill_break = {},
@@ -56,15 +56,25 @@ hslk_global = {
     unit_hero_tavern = 0, -- 酒馆id
     unit_hero_tavern_token = 0, -- 酒馆选择马甲id（视野）
     unit_hero_death_token = 0,
-    heroesLen = 0,
-    heroesKV = {},
-    heroesItems = {},
-    heroesItemsKV = {},
-    unitsKV = {},
-    itemsKV = {},
-    itemsShadowKV = {},
-    itemsFaceKV = {},
-    abilitiesKV = {},
+    items_shadow_mapping = {},
+    id2Value = {
+        unit = {},
+        item = {},
+        ability = {},
+        technology = {},
+    },
+    name2Value = {
+        unit = {},
+        item = {},
+        ability = {},
+        technology = {},
+    },
+    id_array = {
+        unit = {},
+        item = {},
+        ability = {},
+        technology = {},
+    },
     attr = {
         agi_green = {
             add = {},
@@ -114,8 +124,8 @@ hslk_global = {
             add = {},
             sub = {}
         },
-        ablisGradient = {},
-        sightGradient = {}
+        ablis_gradient = {},
+        sight_gradient = {}
     }
 }
 
@@ -149,9 +159,9 @@ hslk_global.unit_hero_tavern_token = cj.LoadInteger(cg.hash_hslk, HSK.COMMON, HS
 hslk_global.unit_hero_death_token = cj.LoadInteger(cg.hash_hslk, HSK.COMMON, HSK.UNIT_HERO_DEATH_TOKEN)
 
 -- 瞬逝物系统
-qty = cj.LoadInteger(cg.hash_hslk, HSK.ITEM_MOMENT, -1)
+qty = cj.LoadInteger(cg.hash_hslk, HSK.ITEM_FLEETING, -1)
 for i = 1, qty do
-    table.insert(hslk_global.item_moment, cj.LoadInteger(cg.hash_hslk, HSK.ITEM_MOMENT, i))
+    table.insert(hslk_global.item_fleeting, cj.LoadInteger(cg.hash_hslk, HSK.ITEM_FLEETING, i))
 end
 
 -- 环境系统
@@ -165,7 +175,7 @@ end
 -- 属性系统
 for i = 1, 9 do
     local val = math.floor(10 ^ (i - 1))
-    table.insert(hslk_global.attr.ablisGradient, val)
+    table.insert(hslk_global.attr.ablis_gradient, val)
     hslk_global.attr.str_green.add[val] = cj.LoadInteger(cg.hash_hslk, HSK.ATTR_STR_GREEN_ADD, val)
     hslk_global.attr.str_green.sub[val] = cj.LoadInteger(cg.hash_hslk, HSK.ATTR_STR_GREEN_SUB, val)
     hslk_global.attr.agi_green.add[val] = cj.LoadInteger(cg.hash_hslk, HSK.ATTR_AGI_GREEN_ADD, val)
@@ -196,14 +206,14 @@ local si = 1
 while (si <= 10000) do
     for _, v in ipairs(sightBase) do
         v = math.floor(v * si)
-        table.insert(hslk_global.attr.sightGradient, v)
+        table.insert(hslk_global.attr.sight_gradient, v)
         hslk_global.attr.sight.add[v] = cj.LoadInteger(cg.hash_hslk, HSK.ATTR_SIGHT_ADD, v)
         hslk_global.attr.sight.sub[v] = cj.LoadInteger(cg.hash_hslk, HSK.ATTR_SIGHT_SUB, v)
     end
     si = si * 10
 end
 table.sort(
-    hslk_global.attr.sightGradient,
+    hslk_global.attr.sight_gradient,
     function(a, b)
         return a > b
     end
@@ -217,4 +227,30 @@ hslk_global.skill_shapeshift[toUnitId] = {
     backAbilityId = backAbilityId
 }
 
+for i = 1, 4 do
+    local qty = cj.LoadInteger(cg.hash_hslk_helper, 0, i)
+    if (qty > 0) then
+        for j = 1, qty do
+            local js = cj.LoadStr(cg.hash_hslk_helper, i, j)
+            local data = json.parse(js)
+            if (data) then
+                if (i == 1) then
+                    hRuntime.register.item(data)
+                elseif (i == 2) then
+                    hRuntime.register.unit(data)
+                    if (hRuntime.unit_type_ids[data.UNIT_TYPE] == nil) then
+                        hRuntime.unit_type_ids[data.UNIT_TYPE] = {}
+                    end
+                    table.insert(hRuntime.unit_type_ids[data.UNIT_TYPE], data.UNIT_ID)
+                elseif (i == 3) then
+                    hRuntime.register.ability(data)
+                elseif (i == 4) then
+                    hRuntime.register.technology(data)
+                end
+            end
+        end
+    end
+end
+
 cj.FlushParentHashtable(cg.hash_hslk)
+cj.FlushParentHashtable(cg.hash_hslk_helper)

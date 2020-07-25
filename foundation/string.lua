@@ -34,14 +34,14 @@ string.id2char = function(id)
 end
 
 --- 获取字符串真实长度
----@param inputstr string
+---@param inputStr string
 ---@return number
-string.mb_len = function(inputstr)
-    local lenInByte = #inputstr
+string.mb_len = function(inputStr)
+    local lenInByte = #inputStr
     local width = 0
     local i = 1
     while (i <= lenInByte) do
-        local curByte = string.byte(inputstr, i)
+        local curByte = string.byte(inputStr, i)
         local byteCount = 1
         if curByte > 0 and curByte <= 127 then
             byteCount = 1 -- 1字节字符
@@ -52,7 +52,6 @@ string.mb_len = function(inputstr)
         elseif curByte >= 240 and curByte <= 247 then
             byteCount = 4 -- 4字节字符
         end
-        local char = string.sub(inputstr, i, i + byteCount - 1)
         i = i + byteCount -- 重置下一字节的索引
         width = width + 1 -- 字符的个数（长度）
     end
@@ -226,9 +225,9 @@ end
 ---@param table table
 ---@return string
 string.implode = function(delimeter, table)
-    local str
+    local str = ""
     for _, v in ipairs(table) do
-        if (str == nil) then
+        if (str == "") then
             str = v
         else
             str = str .. delimeter .. v

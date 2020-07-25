@@ -13,6 +13,29 @@ hitem = {
         COORDINATE = "coordinate", --坐标
         UNIT = "unit" --单位
     },
+    FLEETING_IDS = {
+        GOLD = hslk_global.item_fleeting[1], -- 默认金币（模型）
+        LUMBER = hslk_global.item_fleeting[2], -- 默认木头
+        BOOK_YELLOW = hslk_global.item_fleeting[3], -- 技能书系列
+        BOOK_GREEN = hslk_global.item_fleeting[4],
+        BOOK_PURPLE = hslk_global.item_fleeting[5],
+        BOOK_BLUE = hslk_global.item_fleeting[6],
+        BOOK_RED = hslk_global.item_fleeting[7],
+        RUNE = hslk_global.item_fleeting[8], -- 神符（紫色符文）
+        RELIEF = hslk_global.item_fleeting[9], -- 浮雕（橙色像块炭）
+        EGG = hslk_global.item_fleeting[10], -- 蛋
+        FRAGMENT = hslk_global.item_fleeting[11], -- 碎片（蓝色石头）
+        QUESTION = hslk_global.item_fleeting[12], -- 问号
+        GRASS = hslk_global.item_fleeting[13], -- 荧光草
+        DOTA2_GOLD = hslk_global.item_fleeting[14], -- Dota2赏金符
+        DOTA2_DAMAGE = hslk_global.item_fleeting[15], -- Dota2伤害符
+        DOTA2_CURE = hslk_global.item_fleeting[16], -- Dota2恢复符
+        DOTA2_SPEED = hslk_global.item_fleeting[17], -- Dota2极速符
+        DOTA2_VISION = hslk_global.item_fleeting[18], -- Dota2幻象符
+        DOTA2_INVISIBLE = hslk_global.item_fleeting[19], -- Dota2隐身符
+    },
+    -- 全局使用注册
+    MATCH_ITEM_USED = {},
 }
 
 -- 单位注册物品
@@ -49,6 +72,29 @@ hitem.clearUnitCache = function(whichUnit)
             if (it ~= nil) then
                 hRuntime.clear(it)
             end
+        end
+    end
+end
+
+--- 注册一些物品的方法，在物品被使用时自动回调
+--- 可以简化onItemUsed的使用，协助管理物品
+--- 适用于大众物品调用,支持正则匹配
+--- evtData 同 hevent.onItemUsed
+---@param options table
+hitem.matchUsed = function(options)
+    --[[
+        options = {
+            {"匹配的物品名1", function(evtData) end},
+            {"匹配的物品名2", function(evtData) end},
+            ...
+        }
+    ]]
+    if (#options <= 0) then
+        return
+    end
+    for _, v in ipairs(options) do
+        if (type(v[1]) == "string" and type(v[2]) == "function") then
+            table.insert(hitem.MATCH_ITEM_USED, v)
         end
     end
 end
@@ -135,8 +181,8 @@ hitem.getSlk = function(itOrId)
     else
         itId = hitem.getId(itOrId)
     end
-    if (hslk_global.itemsKV[itId] ~= nil) then
-        slk = hslk_global.itemsKV[itId]
+    if (hslk_global.id2Value.item[itId] ~= nil) then
+        slk = hslk_global.id2Value.item[itId]
     end
     return slk
 end
@@ -239,40 +285,17 @@ hitem.getIsSellAble = function(itOrId)
         return false
     end
 end
---- 获取物品的影子ID（实现神符满格购物的关键）,需要注册
+--- 获取物品的(表面/影子)ID（实现神符满格购物的关键，会自动获得相对ID）,需要注册
 ---@param itOrId userdata|string|number
 ---@return string
-hitem.getShadowId = function(itOrId)
+hitem.getShadowMappingId = function(itOrId)
     local itId
     if (type(itOrId == "string")) then
         itId = itOrId
     else
         itId = hitem.getId(itOrId)
     end
-    return hslk_global.itemsShadowKV[itId]
-end
--- 获取物品的真实ID（实现神符满格购物的关键）,需要注册
----@param itOrId userdata|string|number
----@return string
-hitem.getFaceId = function(itOrId)
-    local itId
-    if (type(itOrId == "string")) then
-        itId = itOrId
-    else
-        itId = hitem.getId(itOrId)
-    end
-    return hslk_global.itemsFaceKV[itId]
-end
---- 获取物品的回调函数,需要注册
----@param itOrId userdata|string|number
----@return function
-hitem.getTriggerCall = function(itOrId)
-    local slk = hitem.getSlk(itOrId)
-    if (slk ~= nil) then
-        return slk.TRIGGER_CALL
-    else
-        return nil
-    end
+    return hslk_global.items_shadow_mapping[itId]
 end
 --- 获取物品的最大叠加数(默认是1个,此系统以使用次数作为数量使用),需要注册
 ---@param itOrId userdata|string|number
@@ -306,10 +329,32 @@ end
 hitem.getAttribute = function(itOrId)
     local slk = hitem.getSlk(itOrId)
     if (slk ~= nil) then
-        return slk.ATTR or slk.ATTRIBUTE or {}
+        return slk.ATTR or {}
     else
         return {}
     end
+end
+
+--- 获取物品的SLK自定义数据CUSTOM_DATA
+---@param itOrId any
+---@return table
+hitem.getCustomData = function(itOrId)
+    local slk = hitem.getSlk(itOrId)
+    if (slk ~= nil) then
+        return slk.CUSTOM_DATA or {}
+    else
+        return {}
+    end
+end
+
+--- 获取物品的等级
+---@param it userdata
+---@return number
+hitem.getLevel = function(it)
+    if (it ~= nil) then
+        return cj.GetItemLevel(it)
+    end
+    return 0
 end
 
 --- 获取物品的使用次数
@@ -330,6 +375,7 @@ hitem.setCharges = function(it, charges)
         cj.SetItemCharges(it, charges)
     end
 end
+
 --- 获取某单位身上某种物品的使用总次数
 ---@param itemId string|number
 ---@param whichUnit userdata
@@ -364,6 +410,19 @@ hitem.getEmptySlot = function(whichUnit)
     return qty
 end
 
+--- 循环获取某单位6格物品
+---@alias SlotLoop fun(enumUnit: userdata):void
+---@param whichUnit userdata
+---@param action SlotLoop | "function(slotItem, slotIndex) end"
+---@return number
+hitem.slotLoop = function(whichUnit, action)
+    local it
+    for i = 0, 5, 1 do
+        it = cj.UnitItemInSlot(whichUnit, i)
+        action(it, i)
+    end
+end
+
 --- 使得单位拥有拆分物品的技能
 ---@param whichUnit userdata
 hitem.setAllowSeparate = function(whichUnit)
@@ -377,7 +436,7 @@ hitem.setAllowSeparate = function(whichUnit)
     end)
 end
 
---- 计算单位获得物品后的属性
+--- 计算单位得失物品的属性影响
 ---@private
 hitem.caleAttribute = function(isAdd, whichUnit, itId, charges)
     if (isAdd == nil) then
@@ -467,7 +526,7 @@ hitem.caleAttribute = function(isAdd, whichUnit, itId, charges)
     end
     hattr.set(whichUnit, 0, diff)
     if (#diffPlayer > 0) then
-        local p = cj.GetOwningPlayer(whichUnit)
+        local p = hunit.getOwner(whichUnit)
         for _, dp in ipairs(diffPlayer) do
             local pk = dp[1]
             local pv = dp[2]
@@ -660,10 +719,10 @@ hitem.create = function(bean)
         it = cj.CreateItem(bean.itemId, bean.x, bean.y)
         type = hitem.POSITION_TYPE.COORDINATE
     elseif (bean.whichUnitPosition ~= nil) then
-        it = cj.CreateItem(bean.itemId, cj.GetUnitX(bean.whichUnit), cj.GetUnitY(bean.whichUnit))
+        it = cj.CreateItem(bean.itemId, hunit.x(bean.whichUnit), hunit.y(bean.whichUnit))
         type = hitem.POSITION_TYPE.COORDINATE
     elseif (bean.whichUnit ~= nil) then
-        it = cj.CreateItem(bean.itemId, cj.GetUnitX(bean.whichUnit), cj.GetUnitY(bean.whichUnit))
+        it = cj.CreateItem(bean.itemId, hunit.x(bean.whichUnit), hunit.y(bean.whichUnit))
         type = hitem.POSITION_TYPE.UNIT
     elseif (bean.whichLoc ~= nil) then
         it = cj.CreateItem(bean.itemId, cj.GetLocationX(bean.whichLoc), cj.GetLocationY(bean.whichLoc))
@@ -694,6 +753,42 @@ hitem.create = function(bean)
                 end
             )
         end
+    end
+    return it
+end
+
+--- 创建[瞬逝物]物品
+--- 是以单位模拟的物品，进入范围瞬间消失并生效
+--- 可以增加玩家的反馈刺激感
+--- [type]金币,木材,黄色书,绿色书,紫色书,蓝色书,红色书,神符,浮雕,蛋",碎片,问号,荧光草Dota2赏金符,Dota2伤害符,Dota2恢复符,Dota2极速符,Dota2幻象符,Dota2隐身符
+---@param fleetingType number hitem.FLEETING_IDS[n]
+---@param x number 坐标X
+---@param y number 坐标Y
+---@param during number 持续时间（可选，默认30秒）
+---@param yourFunc onEnterUnitRange | "function(evtData) end"
+---@return userdata item-unit
+hitem.fleeting = function(fleetingType, x, y, during, yourFunc)
+    if (fleetingType == nil) then
+        print_err("hitem fleeting -type")
+        return
+    end
+    if (x == nil or y == nil) then
+        return
+    end
+    during = during or 30
+    if (during < 0) then
+        return
+    end
+    local it = hunit.create({
+        register = false,
+        whichPlayer = hplayer.player_passive,
+        unitId = fleetingType,
+        x = x,
+        y = y,
+        during = during,
+    })
+    if (type(yourFunc) == "function") then
+        hevent.onEnterUnitRange(it, 127, yourFunc)
     end
     return it
 end
@@ -765,8 +860,8 @@ hitem.drop = function(origin)
                 {
                     itemId = hitem.getId(it),
                     charges = hitem.getCharges(it),
-                    x = cj.GetUnitX(origin),
-                    x = cj.GetUnitY(origin)
+                    x = hunit.x(origin),
+                    x = hunit.y(origin)
                 }
             )
             htime.del(it, 0)

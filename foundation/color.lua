@@ -93,6 +93,14 @@ hColor.yellow = function(str)
     return hColor.mixed(str, "ffff00")
 end
 
+--- 橙色
+---@public
+---@param str string
+---@return string
+hColor.orange = function(str)
+    return hColor.mixed(str, "ffc657")
+end
+
 --- 天空蓝
 ---@public
 ---@param str string

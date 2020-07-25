@@ -31,10 +31,23 @@ end
 ---@param angle number
 ---@return table
 math.polarProjection = function(x, y, dist, angle)
-    return {
-        x = x + dist * math.cos(angle * bj_DEGTORAD),
-        y = y + dist * math.sin(angle * bj_DEGTORAD)
-    }
+    local tx = x + dist * math.cos(angle * bj_DEGTORAD)
+    local ty = y + dist * math.sin(angle * bj_DEGTORAD)
+    local minX = cj.GetRectMinX(hrect.MAP_INITIAL_PLAYABLE_AREA)
+    local minY = cj.GetRectMinY(hrect.MAP_INITIAL_PLAYABLE_AREA)
+    local maxX = cj.GetRectMaxX(hrect.MAP_INITIAL_PLAYABLE_AREA)
+    local maxY = cj.GetRectMaxY(hrect.MAP_INITIAL_PLAYABLE_AREA)
+    if (tx < minX) then
+        tx = minX
+    elseif (tx > maxX) then
+        tx = maxX
+    end
+    if (ty < minY) then
+        ty = minY
+    elseif (ty > maxY) then
+        ty = maxY
+    end
+    return { x = tx, y = ty }
 end
 
 --- 四舍五入
@@ -49,23 +62,36 @@ end
 
 --- 数字格式化
 ---@param value number
----@return number
+---@return string
 math.numberFormat = function(value)
-    local txt = ""
-    if (value > 10000 * 10000 * 10000 * 10000) then
-        txt = string.format("%.2f", value / 10000 * 10000 * 10000 * 10000) .. "亿亿"
-    elseif (value > 10000 * 10000 * 10000) then
-        txt = string.format("%.2f", value / 10000 * 10000 * 10000) .. "万亿"
-    elseif (value > 10000 * 10000) then
-        txt = string.format("%.2f", value / 10000 * 10000) .. "亿"
-    elseif (value > 10000) then
-        txt = string.format("%.2f", value / 10000) .. "万"
+    if (value > 10000 * 100000000) then
+        return string.format("%.2f", value / 10000 * 100000000) .. "T"
+    elseif (value > 10 * 100000000) then
+        return string.format("%.2f", value / 10 * 100000000) .. "B"
+    elseif (value > 100 * 10000) then
+        return string.format("%.2f", value / 100 * 10000) .. "M"
     elseif (value > 1000) then
-        txt = string.format("%.2f", value / 1000) .. "千"
+        return string.format("%.2f", value / 1000) .. "K"
     else
-        txt = string.format("%.2f", value)
+        return string.format("%.2f", value)
     end
-    return txt
+end
+
+--- 整型格式化
+---@param value number
+---@return string
+math.integerFormat = function(value)
+    if (value > 10000 * 100000000) then
+        return math.floor(value / 10000 * 100000000) .. "T"
+    elseif (value > 10 * 100000000) then
+        return math.floor(value / 10 * 100000000) .. "B"
+    elseif (value > 100 * 10000) then
+        return math.floor(value / 100 * 10000) .. "M"
+    elseif (value > 1000) then
+        return math.floor(value / 1000) .. "K"
+    else
+        return tostring(math.floor(value))
+    end
 end
 
 --- 获取两个坐标间角度，如果其中一个单位为空 返回0
@@ -97,7 +123,7 @@ math.getDegBetweenUnit = function(u1, u2)
     if (u1 == nil or u2 == nil) then
         return 0
     end
-    return math.getDegBetweenXY(cj.GetUnitX(u1), cj.GetUnitY(u1), cj.GetUnitX(u2), cj.GetUnitY(u2))
+    return math.getDegBetweenXY(hunit.x(u1), hunit.y(u1), hunit.x(u2), hunit.y(u2))
 end
 
 --- 获取两个坐标距离
@@ -125,7 +151,7 @@ end
 ---@param u2 userdata
 ---@return number
 math.getDistanceBetweenUnit = function(u1, u2)
-    return math.getDistanceBetweenXY(cj.GetUnitX(u1), cj.GetUnitY(u1), cj.GetUnitX(u2), cj.GetUnitY(u2))
+    return math.getDistanceBetweenXY(hunit.x(u1), hunit.y(u1), hunit.x(u2), hunit.y(u2))
 end
 
 --- 获取矩形区域内某角度距离边缘最大距离

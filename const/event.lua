@@ -80,4 +80,5 @@ CONST_EVENT = {
     constructFinish = "constructFinish",
     pickHero = "pickHero",
     playerLeave = "playerLeave",
+    destructableDestroy = "destructableDestroy",
 }

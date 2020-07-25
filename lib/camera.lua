@@ -43,7 +43,7 @@ hcamera.toUnit = function(whichPlayer, during, whichUnit)
         return
     end
     if (whichPlayer == nil or cj.GetLocalPlayer() == whichPlayer) then
-        cj.PanCameraToTimed(cj.GetUnitX(whichUnit), cj.GetUnitY(whichUnit), during)
+        cj.PanCameraToTimed(hunit.x(whichUnit), hunit.y(whichUnit), during)
     end
 end
 --- 锁定镜头

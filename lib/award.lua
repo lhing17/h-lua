@@ -18,7 +18,7 @@ haward.forUnit = function(whichUnit, exp, gold, lumber)
     if (whichUnit == nil) then
         return
     end
-    local p = cj.GetOwningPlayer(whichUnit)
+    local p = hunit.getOwner(whichUnit)
     local index = hplayer.index(p)
     local realGold = cj.R2I(gold)
     local realLumber = cj.R2I(lumber)
@@ -38,8 +38,8 @@ haward.forUnit = function(whichUnit, exp, gold, lumber)
         local ttg = htextTag.create2Unit(whichUnit, floatStr, 7, "", 1, 1.70, 60.00)
         cj.SetTextTagPos(
             ttg,
-            cj.GetUnitX(whichUnit) - (string.len(floatStr) - ttgColorLen) * 7 * 0.5,
-            cj.GetUnitY(whichUnit),
+            hunit.x(whichUnit) - (string.len(floatStr) - ttgColorLen) * 7 * 0.5,
+            hunit.y(whichUnit),
             50
         )
         htextTag.style(ttg, "toggle", 0, 0.25)

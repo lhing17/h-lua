@@ -1,5 +1,19 @@
 ---@class hrect
-hrect = {}
+hrect = {
+    WORLD_BOUND = cj.GetWorldBounds(),
+    MAP_INITIAL_PLAYABLE_AREA = cj.Rect(
+        cj.GetCameraBoundMinX() - cj.GetCameraMargin(CAMERA_MARGIN_LEFT),
+        cj.GetCameraBoundMinY() - cj.GetCameraMargin(CAMERA_MARGIN_BOTTOM),
+        cj.GetCameraBoundMaxX() + cj.GetCameraMargin(CAMERA_MARGIN_RIGHT),
+        cj.GetCameraBoundMaxY() + cj.GetCameraMargin(CAMERA_MARGIN_TOP)
+    ),
+    MAP_CAMERA_AREA = cj.Rect(
+        cj.GetCameraBoundMinX(),
+        cj.GetCameraBoundMinY(),
+        cj.GetCameraBoundMaxX(),
+        cj.GetCameraBoundMaxY()
+    )
+}
 
 --- 创建一个设定中心（x,y）创建一个长w宽h的矩形区域
 ---@param x number
@@ -122,6 +136,7 @@ end
 ---@param whichRect userdata
 ---@param delay number|nil 延时
 hrect.del = function(whichRect, delay)
+    delay = delay or 0
     if (delay == nil or delay <= 0) then
         hRuntime.clear(whichRect)
         cj.RemoveRect(whichRect)
@@ -168,7 +183,7 @@ hrect.lock = function(bean)
         return
     end
     local inc = 0
-    local lockGroup = cj.CreateGroup()
+    local lockGroup = {}
     htime.setInterval(
         0.1,
         function(t)
@@ -193,8 +208,8 @@ hrect.lock = function(bean)
                     htime.delTimer(t)
                     return
                 end
-                x = cj.GetUnitX(bean.whichUnit)
-                y = cj.GetUnitY(bean.whichUnit)
+                x = hunit.x(bean.whichUnit)
+                y = hunit.y(bean.whichUnit)
             end
             --区域优先
             if (bean.whichRect) then
@@ -208,12 +223,12 @@ hrect.lock = function(bean)
                 end
             end
             local lockRect
-            local tempGroup = cj.CreateGroup()
+            local tempGroup
             if (bean.type == "square") then
                 lockRect = cj.Rect(x - (w * 0.5), y - (h * 0.5), x + (w * 0.5), y + (h * 0.5))
-                cj.GroupEnumUnitsInRect(tempGroup, lockRect, nil)
+                tempGroup = hgroup.createByRect(lockRect)
             elseif (bean.type == "circle") then
-                cj.GroupEnumUnitsInRange(tempGroup, x, y, math.min(w / 2, h / 2), nil)
+                tempGroup = hgroup.createByXY(x, y, math.min(w / 2, h / 2))
             end
             hgroup.loop(
                 tempGroup,
@@ -228,8 +243,8 @@ hrect.lock = function(bean)
                     print_mb(hunit.getName(u))
                     local distance = 0.000
                     local deg = 0
-                    local xx = cj.GetUnitX(u)
-                    local yy = cj.GetUnitY(u)
+                    local xx = hunit.x(u)
+                    local yy = hunit.y(u)
                     if (bean.type == "square") then
                         if (his.borderRect(lockRect, xx, yy) == true) then
                             deg = math.getDegBetweenXY(x, y, xx, yy)
@@ -243,7 +258,7 @@ hrect.lock = function(bean)
                     end
                     if (distance > 0.0) then
                         local polar = math.polarProjection(x, y, distance, deg)
-                        cj.SetUnitPosition(u, polar.x, polar.y)
+                        hunit.portal(u, polar.x, polar.y)
                         heffect.bindUnit("Abilities\\Spells\\Human\\Defend\\DefendCaster.mdl", u, "origin", 0.2)
                     end
                 end,

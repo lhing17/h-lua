@@ -1,12 +1,5 @@
 ---@class his 判断
-his = {
-    mapInitialPlayableArea = cj.Rect(
-        cj.GetCameraBoundMinX() - cj.GetCameraMargin(CAMERA_MARGIN_LEFT),
-        cj.GetCameraBoundMinY() - cj.GetCameraMargin(CAMERA_MARGIN_BOTTOM),
-        cj.GetCameraBoundMaxX() + cj.GetCameraMargin(CAMERA_MARGIN_RIGHT),
-        cj.GetCameraBoundMaxY() + cj.GetCameraMargin(CAMERA_MARGIN_TOP)
-    )
-}
+his = {}
 
 ---@private
 his.set = function(handle, key, val)
@@ -163,10 +156,15 @@ his.invisible = function(whichUnit)
 end
 
 --- 是否英雄
+--- UNIT_TYPE_HERO是对应平衡常数的英雄列表
+--- hero和courier_hero是对应slkHelper里面的UNIT_TYPE，是本框架固有用法
 ---@param whichUnit userdata
 ---@return boolean
 his.hero = function(whichUnit)
-    return cj.IsUnitType(whichUnit, UNIT_TYPE_HERO) or his.get(whichUnit, "isHero") == true
+    local uid = hunit.getId(whichUnit)
+    return cj.IsUnitType(whichUnit, UNIT_TYPE_HERO)
+        or table.includes(uid, hRuntime.unit_type_ids.hero) == true
+        or table.includes(uid, hRuntime.unit_type_ids.courier_hero) == true
 end
 
 --- 是否建筑
@@ -277,6 +275,13 @@ end
 --- 是否正在受伤
 ---@param whichUnit userdata
 ---@return boolean
+his.beDamaging = function(whichUnit)
+    return his.get(whichUnit, "isBeDamaging")
+end
+
+--- 是否正在造成伤害
+---@param whichUnit userdata
+---@return boolean
 his.damaging = function(whichUnit)
     return his.get(whichUnit, "isDamaging")
 end
@@ -285,14 +290,14 @@ end
 ---@param whichUnit userdata
 ---@return boolean
 his.water = function(whichUnit)
-    return cj.IsTerrainPathable(cj.GetUnitX(whichUnit), cj.GetUnitY(whichUnit), PATHING_TYPE_FLOATABILITY) == false
+    return cj.IsTerrainPathable(hunit.x(whichUnit), hunit.y(whichUnit), PATHING_TYPE_FLOATABILITY) == false
 end
 
 --- 是否处于地面
 ---@param whichUnit userdata
 ---@return boolean
 his.floor = function(whichUnit)
-    return cj.IsTerrainPathable(cj.GetUnitX(whichUnit), cj.GetUnitY(whichUnit), PATHING_TYPE_FLOATABILITY) == true
+    return cj.IsTerrainPathable(hunit.x(whichUnit), hunit.y(whichUnit), PATHING_TYPE_FLOATABILITY) == true
 end
 
 --- 是否某个特定单位
@@ -308,7 +313,7 @@ end
 ---@param otherUnit userdata
 ---@return boolean
 his.enemy = function(whichUnit, otherUnit)
-    return cj.IsUnitEnemy(whichUnit, cj.GetOwningPlayer(otherUnit))
+    return cj.IsUnitEnemy(whichUnit, hunit.getOwner(otherUnit))
 end
 
 --- 是否友军单位
@@ -316,7 +321,43 @@ end
 ---@param otherUnit userdata
 ---@return boolean
 his.ally = function(whichUnit, otherUnit)
-    return cj.IsUnitAlly(whichUnit, cj.GetOwningPlayer(otherUnit))
+    return cj.IsUnitAlly(whichUnit, hunit.getOwner(otherUnit))
+end
+
+--- 判断两个单位是否背对着
+---@param u1 userdata
+---@param u2 userdata
+---@param maxDistance number 最大相对距离
+---@return number
+his.behind = function(u1, u2, maxDistance)
+    if (his.alive(u1) == false or his.alive(u2) == false) then
+        return false
+    end
+    maxDistance = maxDistance or 99999
+    if (math.getDistanceBetweenUnit(u1, u2) > maxDistance) then
+        return false
+    end
+    local fac1 = hunit.getFacing(u1)
+    local fac2 = hunit.getFacing(u2)
+    return math.abs(fac1 - fac2) <= 50
+end
+
+--- 判断两个单位是否正对着
+---@param u1 userdata
+---@param u2 userdata
+---@param maxDistance number 最大相对距离
+---@return number
+his.face = function(u1, u2, maxDistance)
+    if (his.alive(u1) == false or his.alive(u2) == false) then
+        return false
+    end
+    maxDistance = maxDistance or 99999
+    if (math.getDistanceBetweenUnit(u1, u2) > maxDistance) then
+        return false
+    end
+    local fac1 = hunit.getFacing(u1)
+    local fac2 = hunit.getFacing(u2)
+    return math.abs((math.abs(fac1 - fac2) - 180)) <= 50
 end
 
 --- 是否敌人玩家
@@ -333,6 +374,11 @@ end
 ---@return boolean
 his.allyPlayer = function(whichUnit, whichPlayer)
     return cj.IsUnitAlly(whichUnit, whichPlayer)
+end
+
+--- 是否在区域内
+his.inRect = function(whichRect, x, y)
+    return (x < cj.GetRectMaxX(whichRect) and x > cj.GetRectMinX(whichRect) and y < cj.GetRectMaxY(whichRect) and y > cj.GetRectMinY(whichRect))
 end
 
 --- 是否超出区域边界
@@ -356,7 +402,15 @@ end
 ---@param y number
 ---@return boolean
 his.borderMap = function(x, y)
-    return his.borderRect(his.mapInitialPlayableArea, x, y)
+    return his.borderRect(hrect.MAP_INITIAL_PLAYABLE_AREA, x, y)
+end
+
+--- 是否超出镜头边界
+---@param x number
+---@param y number
+---@return boolean
+his.borderCamera = function(x, y)
+    return his.borderRect(his.MAP_CAMERA_AREA, x, y)
 end
 
 --- 是否身上有某种物品

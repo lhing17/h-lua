@@ -101,8 +101,28 @@ henvData = {
     },
 }
 henv = {
-    --- 清理装饰物函数
-    destructableClear = function()
+    --- 删除可破坏物
+    --- * 当可破坏物被破坏时删除会引起游戏崩溃
+    delDestructable = function(whichDestructable, delay)
+        delay = delay or 0.5
+        if (delay == nil or delay <= 0) then
+            hRuntime.clear(whichDestructable)
+            cj.RemoveDestructable(whichDestructable)
+            whichDestructable = nil
+        else
+            htime.setTimeout(
+                delay,
+                function(t)
+                    htime.delTimer(t)
+                    hRuntime.clear(whichDestructable)
+                    cj.RemoveDestructable(whichDestructable)
+                    whichDestructable = nil
+                end
+            )
+        end
+    end,
+    --- 清理可破坏物
+    _clearDestructable = function()
         cj.RemoveDestructable(cj.GetEnumDestructable())
     end
 }
@@ -130,7 +150,7 @@ end
 
 --- 清空一片区域的可破坏物
 henv.clearDestructable = function(whichRect)
-    cj.EnumDestructablesInRect(whichRect, nil, henv.destructableClear)
+    cj.EnumDestructablesInRect(whichRect, nil, henv._clearDestructable)
 end
 
 --- 构建区域装饰

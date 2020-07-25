@@ -1,6 +1,18 @@
 ---@class htexture 纹理（遮罩/警示圈）
 htexture = {
+    --- 警示圈模型
     TEXTURE_ALERT_CIRCLE_TOKEN = hslk_global.unit_token_alert_circle,
+    --- 系统自带遮罩
+    DEFAULT_MARKS = {
+        WHITE = "ReplaceableTextures\\CameraMasks\\White_mask.blp", --白色迷雾
+        BLACK = "ReplaceableTextures\\CameraMasks\\Black_mask.blp", --黑色迷雾
+        HAZE = "ReplaceableTextures\\CameraMasks\\HazeFilter_mask.blp", --薄雾
+        GROUND_FOG = "ReplaceableTextures\\CameraMasks\\GroundFog_mask.blp", --地面迷雾
+        HAZE_AND_FOG = "ReplaceableTextures\\CameraMasks\\HazeAndFogFilter_Mask.blp", --薄雾和迷雾
+        DIAGONAL_SLASH = "ReplaceableTextures\\CameraMasks\\DiagonalSlash_mask.blp", --对角线
+        DREAM = "ReplaceableTextures\\CameraMasks\\DreamFilter_Mask.blp", --梦境（四周模糊）
+        SCOPE = "ReplaceableTextures\\CameraMasks\\Scope_Mask.blp", --范围
+    },
 }
 
 ---@private
@@ -35,16 +47,23 @@ end
 --- 创建一个遮罩
 ---@public
 ---@param path string 贴图路径 512x256 png->blp
----@param during number 持续时间
+---@param during number 持续时间,默认3秒
 ---@param whichPlayer userdata|nil 玩家
-htexture.mark = function(path, during, whichPlayer)
+---@param red number 0-255
+---@param green number 0-255
+---@param blue number 0-255
+htexture.mark = function(path, during, whichPlayer, red, green, blue)
+    red = red or 255
+    green = green or 255
+    blue = blue or 255
+    during = during or 3
     if (whichPlayer == nil) then
         htexture.cinematicFilterGeneric(
             0.50,
             BLEND_MODE_ADDITIVE,
             path,
-            255, 255, 255, 255,
-            255, 255, 255, 0
+            red, green, blue, 255,
+            red, green, blue, 0
         )
         htime.setTimeout(
             during,
@@ -54,36 +73,41 @@ htexture.mark = function(path, during, whichPlayer)
                     0.50,
                     BLEND_MODE_ADDITIVE,
                     path,
-                    255, 255, 255, 0,
-                    255, 255, 255, 255
+                    red, green, blue, 0,
+                    red, green, blue, 255
                 )
             end
         )
     elseif (whichPlayer ~= nil) then
-        if (whichPlayer == cj.GetLocalPlayer()) then
-            htexture.cinematicFilterGeneric(
-                0.50,
-                BLEND_MODE_ADDITIVE,
-                path,
-                255, 255, 255, 255,
-                255, 255, 255, 0
+        local playerIndex = hplayer.index(whichPlayer)
+        if (hRuntime.player[playerIndex].marking ~= true) then
+            hRuntime.player[playerIndex].marking = true
+            if (whichPlayer == cj.GetLocalPlayer()) then
+                htexture.cinematicFilterGeneric(
+                    0.50,
+                    BLEND_MODE_ADDITIVE,
+                    path,
+                    red, green, blue, 255,
+                    red, green, blue, 0
+                )
+            end
+            htime.setTimeout(
+                during,
+                function(t)
+                    htime.delTimer(t)
+                    hRuntime.player[playerIndex].marking = false
+                    if (whichPlayer == cj.GetLocalPlayer()) then
+                        htexture.cinematicFilterGeneric(
+                            0.50,
+                            BLEND_MODE_ADDITIVE,
+                            path,
+                            red, green, blue, 0,
+                            red, green, blue, 255
+                        )
+                    end
+                end
             )
         end
-        htime.setTimeout(
-            during,
-            function(t)
-                htime.delTimer(t)
-                if (whichPlayer == cj.GetLocalPlayer()) then
-                    htexture.cinematicFilterGeneric(
-                        0.50,
-                        BLEND_MODE_ADDITIVE,
-                        path,
-                        255, 255, 255, 0,
-                        255, 255, 255, 255
-                    )
-                end
-            end
-        )
     end
 end
 

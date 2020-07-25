@@ -128,6 +128,7 @@ end
 hplayer.getSelection = function(whichPlayer)
     return hplayer.get(whichPlayer, "selection", nil)
 end
+
 --- 获取玩家当前状态
 ---@param whichPlayer userdata
 ---@return string
@@ -140,11 +141,12 @@ end
 hplayer.setStatus = function(whichPlayer, status)
     hplayer.set(whichPlayer, "status", status)
 end
+
 --- 获取玩家当前称号
 ---@param whichPlayer userdata
 ---@return string
 hplayer.getPrestige = function(whichPlayer)
-    return hplayer.get(whichPlayer, "prestige", "初出茅庐")
+    return hplayer.get(whichPlayer, "prestige", "无称号")
 end
 --- 设置玩家当前称号
 ---@param whichPlayer userdata
@@ -152,6 +154,20 @@ end
 hplayer.setPrestige = function(whichPlayer, prestige)
     hplayer.set(whichPlayer, "prestige", prestige)
 end
+
+--- 获取玩家是否支持random/repick命令
+---@param whichPlayer userdata
+---@return boolean
+hplayer.getAllowCommandPick = function(whichPlayer)
+    return hplayer.get(whichPlayer, "allowCommandPick", false)
+end
+--- 设置玩家是否支持random/repick命令
+---@param whichPlayer userdata
+---@param flag boolean
+hplayer.setAllowCommandPick = function(whichPlayer, flag)
+    hplayer.set(whichPlayer, "allowCommandPick", flag)
+end
+
 --- 获取玩家APM
 ---@param whichPlayer userdata
 ---@return number
@@ -201,18 +217,14 @@ hplayer.hideUnit = function(whichPlayer)
         return
     end
     local g = hgroup.createByRect(
-        cj.GetWorldBounds(),
+        hrect.WORLD_BOUND,
         function(filterUnit)
-            return cj.GetOwningPlayer(filterUnit) == whichPlayer
+            return hunit.getOwner(filterUnit) == whichPlayer
         end
     )
-    while (hgroup.isEmpty(g) ~= true) do
-        local u = cj.FirstOfGroup(g)
-        cj.GroupRemoveUnit(g, u)
-        cj.ShowUnit(u, false)
-    end
-    cj.GroupClear(g)
-    cj.DestroyGroup(g)
+    hgroup.loop(g, function(enumUnit)
+        cj.ShowUnit(enumUnit, false)
+    end, true)
 end
 --- 令玩家单位全部删除
 ---@param whichPlayer userdata
@@ -221,18 +233,12 @@ hplayer.clearUnit = function(whichPlayer)
         return
     end
     local g = hgroup.createByRect(
-        cj.GetWorldBounds(),
+        hrect.WORLD_BOUND,
         function(filterUnit)
-            return cj.GetOwningPlayer(filterUnit) == whichPlayer
+            return hunit.getOwner(filterUnit) == whichPlayer
         end
     )
-    while (hgroup.isEmpty(g) ~= true) do
-        local u = cj.FirstOfGroup(g)
-        cj.GroupRemoveUnit(g, u)
-        hunit.del(u)
-    end
-    cj.GroupClear(g)
-    cj.DestroyGroup(g)
+    hgroup.clear(g, true, true)
 end
 --- 令玩家失败并退出
 ---@param whichPlayer userdata
@@ -695,73 +701,4 @@ hplayer.subLumber = function(whichPlayer, lumber)
         return
     end
     hplayer.setLumber(whichPlayer, hplayer.getLumber(whichPlayer) - lumber)
-end
-
---- 初始化(已内部调用)
----@private
-hplayer.init = function()
-    -- register APM
-    hevent.pool('global', hevent_default_actions.player.apm, function(tgr)
-        for i = 1, bj_MAX_PLAYER_SLOTS, 1 do
-            cj.TriggerRegisterPlayerUnitEvent(tgr, cj.Player(i - 1), EVENT_PLAYER_UNIT_ISSUED_TARGET_ORDER, nil)
-            cj.TriggerRegisterPlayerUnitEvent(tgr, cj.Player(i - 1), EVENT_PLAYER_UNIT_ISSUED_POINT_ORDER, nil)
-            cj.TriggerRegisterPlayerUnitEvent(tgr, cj.Player(i - 1), EVENT_PLAYER_UNIT_ISSUED_ORDER, nil)
-        end
-    end)
-    for i = 1, bj_MAX_PLAYERS, 1 do
-        hplayer.players[i] = cj.Player(i - 1)
-        cj.SetPlayerHandicapXP(hplayer.players[i], 0)
-        hplayer.set(hplayer.players[i], "prevGold", 0)
-        hplayer.set(hplayer.players[i], "prevLumber", 0)
-        hplayer.set(hplayer.players[i], "totalGold", 0)
-        hplayer.set(hplayer.players[i], "totalGoldCost", 0)
-        hplayer.set(hplayer.players[i], "totalLumber", 0)
-        hplayer.set(hplayer.players[i], "totalLumberCost", 0)
-        hplayer.set(hplayer.players[i], "goldRatio", 100)
-        hplayer.set(hplayer.players[i], "lumberRatio", 100)
-        hplayer.set(hplayer.players[i], "expRatio", 100)
-        hplayer.set(hplayer.players[i], "sellRatio", 50)
-        hplayer.set(hplayer.players[i], "apm", 0)
-        hplayer.set(hplayer.players[i], "damage", 0)
-        hplayer.set(hplayer.players[i], "beDamage", 0)
-        hplayer.set(hplayer.players[i], "kill", 0)
-        if
-        ((cj.GetPlayerController(hplayer.players[i]) == MAP_CONTROL_USER) and
-            (cj.GetPlayerSlotState(hplayer.players[i]) == PLAYER_SLOT_STATE_PLAYING))
-        then
-            -- his
-            his.set(hplayer.players[i], "isComputer", false)
-            --
-            hplayer.qty_current = hplayer.qty_current + 1
-            hplayer.set(hplayer.players[i], "status", hplayer.player_status.gaming)
-
-            hevent.onChat(
-                hplayer.players[i], '+', false,
-                hevent_default_actions.player.command
-            )
-            hevent.onChat(
-                hplayer.players[i], '-', false,
-                hevent_default_actions.player.command
-            )
-            -- 玩家离开游戏
-            hevent.pool(hplayer.players[i], hevent_default_actions.player.leave, function(tgr)
-                cj.TriggerRegisterPlayerEvent(tgr, hplayer.players[i], EVENT_PLAYER_LEAVE)
-            end)
-            -- 玩家取消选择单位
-            hevent.onDeSelection(hplayer.players[i], function(evtData)
-                hplayer.set(evtData.triggerPlayer, "selection", nil)
-            end)
-            -- 玩家选中单位
-            hevent.onSelection(
-                hplayer.players[i],
-                1,
-                function(evtData)
-                    hplayer.set(evtData.triggerPlayer, "selection", evtData.triggerUnit)
-                end
-            )
-        else
-            his.set(hplayer.players[i], "isComputer", true)
-            hplayer.set(hplayer.players[i], "status", hplayer.player_status.none)
-        end
-    end
 end

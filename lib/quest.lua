@@ -20,6 +20,7 @@ end
 
 --- 创建一个任务
 ---@param options table
+---@return userdata quest
 hquest.create = function(options)
     --[[
         options = {
@@ -43,9 +44,9 @@ hquest.create = function(options)
     if (content == nil) then
         return
     end
-    local questtype = bj_QUESTTYPE_REQ_DISCOVERED
+    local questType = bj_QUESTTYPE_REQ_DISCOVERED
     if (side == "right") then
-        questtype = bj_QUESTTYPE_OPT_DISCOVERED
+        questType = bj_QUESTTYPE_OPT_DISCOVERED
     end
     local icon = options.icon or "ReplaceableTextures\\CommandButtons\\BTNTomeOfRetraining.blp"
     local required = questType == bj_QUESTTYPE_REQ_DISCOVERED or questType == bj_QUESTTYPE_REQ_UNDISCOVERED

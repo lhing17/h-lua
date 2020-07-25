@@ -134,10 +134,11 @@ end
         isShadow = false, --是否影子，可选
         isUnSelectable = false, --是否可鼠标选中，可选
         isInvulnerable = false, --是否无敌，可选
+        attr = nil, --自定义属性，可选
     }
 ]]
-henemy.create = function(bean)
-    bean.whichPlayer = henemy.getPlayer(bean.qty or 1)
-    bean.isShareSight = henemy.isShareSight()
-    return hunit.create(bean)
+henemy.create = function(options)
+    options.whichPlayer = henemy.getPlayer(options.qty or 1)
+    options.isShareSight = henemy.isShareSight()
+    return hunit.create(options)
 end

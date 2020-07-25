@@ -23,7 +23,7 @@ hevent_default_actions = {
         end),
         constructStart = cj.Condition(function()
             hevent.triggerEvent(
-                cj.GetOwningPlayer(cj.GetTriggerUnit()),
+                hunit.getOwner(cj.GetTriggerUnit()),
                 CONST_EVENT.constructStart,
                 {
                     triggerUnit = cj.GetTriggerUnit()
@@ -32,7 +32,7 @@ hevent_default_actions = {
         end),
         constructCancel = cj.Condition(function()
             hevent.triggerEvent(
-                cj.GetOwningPlayer(cj.GetTriggerUnit()),
+                hunit.getOwner(cj.GetTriggerUnit()),
                 CONST_EVENT.constructCancel,
                 {
                     triggerUnit = cj.GetCancelledStructure()
@@ -41,7 +41,7 @@ hevent_default_actions = {
         end),
         constructFinish = cj.Condition(function()
             hevent.triggerEvent(
-                cj.GetOwningPlayer(cj.GetTriggerUnit()),
+                hunit.getOwner(cj.GetTriggerUnit()),
                 CONST_EVENT.constructFinish,
                 {
                     triggerUnit = cj.GetConstructedStructure()
@@ -49,14 +49,14 @@ hevent_default_actions = {
             )
         end),
         apm = cj.Condition(function()
-            local p = cj.GetOwningPlayer(cj.GetTriggerUnit())
+            local p = hunit.getOwner(cj.GetTriggerUnit())
             if (his.playing(p) == true and his.playerSite(p) == true and his.computer(p) == false) then
                 hplayer.set(p, "apm", hplayer.get(p, "apm", 0) + 1)
             end
         end),
         command = function()
             local p = cj.GetTriggerPlayer()
-            local str = cj.GetEventPlayerChatString()
+            local str = string.lower(cj.GetEventPlayerChatString())
             if (str == "-apc") then
                 if (his.autoConvertGoldToLumber(p) == true) then
                     his.set(p, "isAutoConvertGoldToLumber", false)
@@ -81,12 +81,15 @@ hevent_default_actions = {
                 else
                     echo("此命令仅在单人时有效", p)
                 end
+            elseif (str == "-gg") then
+                hplayer.defeat(p, "GG")
             elseif (str == "-random") then
-                if (#hhero.selectorPool <= 0) then
-                    echo("已禁止random", p)
+                if (#hhero.selectorPool <= 0 or hplayer.getAllowCommandPick(p) ~= true) then
+                    echo("-random命令被禁用", p)
                     return
                 end
-                if (#hhero.player_heroes[p] >= hhero.player_allow_qty[p]) then
+                local pIndex = hplayer.index(p)
+                if (#hhero.player_heroes[pIndex] >= hhero.player_allow_qty[pIndex]) then
                     echo("|cffffff80你已经选够了|r", p)
                     return
                 end
@@ -113,11 +116,10 @@ hevent_default_actions = {
                         table.delete(one, hhero.selectorClearPool)
                         hunit.setInvulnerable(u, false)
                         cj.SetUnitOwner(u, p, true)
-                        cj.SetUnitPosition(u, hhero.bornX, hhero.bornY)
+                        hunit.portal(u, hhero.bornX, hhero.bornY)
                         cj.PauseUnit(u, false)
                     end
-                    hhero.setIsHero(u, true)
-                    table.insert(hhero.player_heroes[p], u)
+                    table.insert(hhero.player_heroes[pIndex], u)
                     -- 触发英雄被选择事件(全局)
                     hevent.triggerEvent(
                         "global",
@@ -129,22 +131,23 @@ hevent_default_actions = {
                     )
                     txt = txt .. " " .. cj.GetUnitName(u)
                     qty = qty + 1
-                    if (#hhero.player_heroes[p] >= hhero.player_allow_qty[p]) then
+                    if (#hhero.player_heroes[pIndex] >= hhero.player_allow_qty[pIndex]) then
                         break
                     end
                 end
                 echo("已为您 |cffffff80random|r 挑选了 " .. "|cffffff80" .. math.floor(qty) .. "|r 个：|cffffff80" .. txt .. "|r", p)
             elseif (str == "-repick") then
-                if (#hhero.selectorPool <= 0) then
-                    echo("已禁止repick", p)
+                if (#hhero.selectorPool <= 0 or hplayer.getAllowCommandPick(p) ~= true) then
+                    echo("-repick命令被禁用", p)
                     return
                 end
-                if (#hhero.player_heroes[p] <= 0) then
+                local pIndex = hplayer.index(p)
+                if (#hhero.player_heroes[pIndex] <= 0) then
                     echo("|cffffff80你还没有选过任何单位|r", p)
                     return
                 end
-                local qty = #hhero.player_heroes[p]
-                for _, u in ipairs(hhero.player_heroes[p]) do
+                local qty = #hhero.player_heroes[pIndex]
+                for _, u in ipairs(hhero.player_heroes[pIndex]) do
                     if (type(hRuntime.hero[u].selector) == "userdata") then
                         table.insert(hhero.selectorPool, hunit.getId(u))
                         cj.AddUnitToStock(hRuntime.hero[u].selector, cj.GetUnitTypeId(u), 1, 1)
@@ -167,7 +170,7 @@ hevent_default_actions = {
                     end
                     hunit.del(u, 0)
                 end
-                hhero.player_heroes[p] = {}
+                hhero.player_heroes[pIndex] = {}
                 echo("已为您 |cffffff80repick|r 了 " .. "|cffffff80" .. qty .. "|r 个单位", p)
             else
                 local first = string.sub(str, 1, 1)
@@ -202,6 +205,37 @@ hevent_default_actions = {
                     triggerPlayer = p
                 }
             )
+        end),
+        selection = cj.Condition(function()
+            local triggerPlayer = cj.GetTriggerPlayer()
+            local triggerUnit = cj.GetTriggerUnit()
+            if (hRuntime.player[triggerPlayer] == nil) then
+                hRuntime.player[triggerPlayer] = {}
+            end
+            if (hRuntime.player[triggerPlayer].click == nil) then
+                hRuntime.player[triggerPlayer].click = 0
+            end
+            hRuntime.player[triggerPlayer].click = hRuntime.player[triggerPlayer].click + 1
+            htime.setTimeout(
+                0.3,
+                function(ct)
+                    htime.delTimer(ct)
+                    hRuntime.player[triggerPlayer].click = hRuntime.player[triggerPlayer].click - 1
+                end
+            )
+            for qty = 1, 10 do
+                if (hRuntime.player[triggerPlayer].click >= qty) then
+                    hevent.triggerEvent(
+                        triggerPlayer,
+                        CONST_EVENT.selection .. "#" .. qty,
+                        {
+                            triggerPlayer = triggerPlayer,
+                            triggerUnit = triggerUnit,
+                            qty = qty
+                        }
+                    )
+                end
+            end
         end),
     },
     unit = {
@@ -333,15 +367,25 @@ hevent_default_actions = {
             local sourceUnit = cj.GetEventDamageSource()
             local targetUnit = cj.GetTriggerUnit()
             local damage = cj.GetEventDamage()
-            local oldLife = hunit.getCurLife(targetUnit)
+            local curLife = hunit.getCurLife(targetUnit)
+            local isLethal = curLife <= damage
             if (damage > 0.125) then
-                hattr.set(targetUnit, 0, { life = "+" .. damage })
+                local changeLife = math.floor(damage) + 1
+                if (isLethal == true) then
+                    cj.SetUnitInvulnerable(targetUnit, true)
+                else
+                    hattr.set(targetUnit, 0, { life = "+" .. changeLife })
+                end
                 htime.setTimeout(
                     0,
                     function(t)
                         htime.delTimer(t)
-                        hattr.set(targetUnit, 0, { life = "-" .. damage })
-                        hunit.setCurLife(targetUnit, oldLife)
+                        if (isLethal == true) then
+                            cj.SetUnitInvulnerable(targetUnit, false)
+                        else
+                            hattr.set(targetUnit, 0, { life = "-" .. changeLife })
+                            hunit.setCurLife(targetUnit, curLife)
+                        end
                         hskill.damage(
                             {
                                 sourceUnit = sourceUnit,
@@ -358,7 +402,7 @@ hevent_default_actions = {
             local u = cj.GetTriggerUnit()
             local killer = hevent.getLastDamageUnit(u)
             if (killer ~= nil) then
-                hplayer.addKill(cj.GetOwningPlayer(killer), 1)
+                hplayer.addKill(hunit.getOwner(killer), 1)
             end
             -- @触发死亡事件
             hevent.triggerEvent(
@@ -381,12 +425,14 @@ hevent_default_actions = {
             )
         end),
         sell = cj.Condition(function()
+            local u = cj.GetSoldUnit()
+            hunit.embed(u)
             hevent.triggerEvent(
                 cj.GetSellingUnit(),
                 CONST_EVENT.unitSell,
                 {
                     triggerUnit = cj.GetSellingUnit(),
-                    soldUnit = cj.GetSoldUnit(),
+                    soldUnit = u,
                     buyingUnit = cj.GetBuyingUnit(),
                 }
             )
@@ -395,11 +441,11 @@ hevent_default_actions = {
     hero = {
         levelUp = cj.Condition(function()
             local u = cj.GetTriggerUnit()
-            hhero.setPrevLevel(u, cj.GetHeroLevel(u))
             local diffLv = cj.GetHeroLevel(u) - hhero.getPrevLevel(u)
             if (diffLv < 1) then
                 return
             end
+            hhero.setPrevLevel(u, cj.GetHeroLevel(u))
             hattr.set(u, 0, {
                 str_white = "=" .. cj.GetHeroStr(u, false),
                 agi_white = "=" .. cj.GetHeroAgi(u, false),
@@ -436,8 +482,8 @@ hevent_default_actions = {
         pickup = cj.Condition(function()
             local it = cj.GetManipulatedItem()
             local itId = string.id2char(cj.GetItemTypeId(it))
-            if (hslk_global.itemsKV[itId] == nil) then
-                -- 排除掉没有注册的物品。例如框架内自带的一些物品
+            if (hslk_global.id2Value.item[itId] == nil) then
+                -- 排除掉没有注册进hslk_global的物品
                 return
             end
             if (hRuntime.item[it] ~= nil and hRuntime.item[it].positionType == hitem.POSITION_TYPE.UNIT) then
@@ -446,14 +492,9 @@ hevent_default_actions = {
             end
             local u = cj.GetTriggerUnit()
             local charges = cj.GetItemCharges(it)
-            local shadowItId = hitem.getShadowId(itId)
+            local shadowItId = hitem.getShadowMappingId(itId)
             if (shadowItId == nil) then
                 if (hitem.getIsPowerUp(itId) == true) then
-                    --检测是否有回调动作
-                    local call = hitem.getTriggerCall(itId)
-                    if (call ~= nil and type(call) == "function") then
-                        call(u, it, itId, charges)
-                    end
                     --触发使用物品事件
                     hevent.triggerEvent(
                         u,
@@ -463,6 +504,16 @@ hevent_default_actions = {
                             triggerItem = it
                         }
                     )
+                    --检测是否有匹配使用
+                    if (#hitem.MATCH_ITEM_USED > 0) then
+                        local itemName = cj.GetItemName(it)
+                        for _, m in ipairs(hitem.MATCH_ITEM_USED) do
+                            local s, e = string.find(itemName, m[1])
+                            if (s ~= nil and e ~= nil) then
+                                m[2]({ triggerUnit = u, triggerItem = it })
+                            end
+                        end
+                    end
                 else
                     --这里删除重建是为了实现地上物品的过期重置
                     hitem.del(it, 0)
@@ -494,7 +545,7 @@ hevent_default_actions = {
             local u = cj.GetTriggerUnit()
             local it = cj.GetManipulatedItem()
             local itId = string.id2char(cj.GetItemTypeId(it))
-            local faceId = hitem.getFaceId(itId)
+            local faceId = hitem.getShadowMappingId(itId)
             local orderId = cj.OrderId("dropitem")
             local charges = cj.GetItemCharges(it)
             if (cj.GetUnitCurrentOrder(u) == orderId) then
@@ -551,7 +602,7 @@ hevent_default_actions = {
             local soldLumber = 0
             hRuntime.clear(it)
             if (goldcost ~= 0 or lumbercost ~= 0) then
-                local p = cj.GetOwningPlayer(u)
+                local p = hunit.getOwner(u)
                 local sellRatio = hplayer.getSellRatio(u)
                 if (sellRatio ~= 50) then
                     if (sellRatio < 0) then
@@ -591,11 +642,8 @@ hevent_default_actions = {
             --检测是否使用后自动消失，如果不是，次数补回1
             if (perishable == false) then
                 hitem.setCharges(it, hitem.getCharges(it) + 1)
-            end
-            --检测是否有回调动作
-            local call = hitem.getTriggerCall(itId)
-            if (call ~= nil and type(call) == "function") then
-                call(u, it, itId, charges)
+            else
+                hitem.subAttribute(u, itId, 1)
             end
             --触发使用物品事件
             hevent.triggerEvent(
@@ -606,6 +654,16 @@ hevent_default_actions = {
                     triggerItem = it
                 }
             )
+            --检测是否有匹配使用
+            if (#hitem.MATCH_ITEM_USED > 0) then
+                local itemName = cj.GetItemName(it)
+                for _, m in ipairs(hitem.MATCH_ITEM_USED) do
+                    local s, e = string.find(itemName, m[1])
+                    if (s ~= nil and e ~= nil) then
+                        m[2]({ triggerUnit = u, triggerItem = it })
+                    end
+                end
+            end
             --消失的清理cache
             if (perishable == true and hitem.getCharges(it) <= 0) then
                 hitem.del(it)
@@ -639,5 +697,16 @@ hevent_default_actions = {
                 print_err("拆分物品尚未完成")
             end
         end),
+    },
+    destructable = {
+        destroy = cj.Condition(function()
+            hevent.triggerEvent(
+                cj.GetTriggerDestructable(),
+                CONST_EVENT.destructableDestroy,
+                {
+                    triggerDestructable = cj.GetTriggerDestructable()
+                }
+            )
+        end)
     }
 }

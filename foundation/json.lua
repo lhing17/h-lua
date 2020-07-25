@@ -55,8 +55,8 @@ local function kind_of(obj)
 end
 
 local function escape_str(s)
-    local in_char = {"\\", '"', "/", "\b", "\f", "\n", "\r", "\t"}
-    local out_char = {"\\", '"', "/", "b", "f", "n", "r", "t"}
+    local in_char = { "\\", '"', "/", "\b", "\f", "\n", "\r", "\t" }
+    local out_char = { "\\", '"', "/", "b", "f", "n", "r", "t" }
     for i, c in ipairs(in_char) do
         s = s:gsub(c, "\\" .. out_char[i])
     end
@@ -94,7 +94,7 @@ local function parse_str_val(str, pos, val)
         return parse_str_val(str, pos + 1, val .. c)
     end
     -- We must have a \ character.
-    local esc_map = {b = "\b", f = "\f", n = "\n", r = "\r", t = "\t"}
+    local esc_map = { b = "\b", f = "\f", n = "\n", r = "\r", t = "\t" }
     local nextc = str:sub(pos + 1, pos + 1)
     if not nextc then
         error(early_end_error)
@@ -216,7 +216,7 @@ function json.parse(str, pos, end_delim)
         return nil, pos + 1
     else
         -- Parse true, false, or null.
-        local literals = {["true"] = true, ["false"] = false, ["null"] = json.null}
+        local literals = { ["true"] = true, ["false"] = false, ["null"] = json.null }
         for lit_str, lit_val in pairs(literals) do
             local lit_end = pos + #lit_str - 1
             if str:sub(pos, lit_end) == lit_str then

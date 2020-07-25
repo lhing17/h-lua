@@ -46,21 +46,20 @@ table.clone = function(org)
 end
 
 --- 合并table
----@param table1 table
----@param table2 table
+---@vararg table
 ---@return table
-table.merge = function(table1, table2)
-    local tempTable
-    if (table1 ~= nil) then
-        tempTable = table1
-    else
-        tempTable = {}
+table.merge = function(...)
+    local tempTable = {}
+    local tables = { ... }
+    if (tables == nil) then
+        return {}
     end
-    if (table2 == nil) then
-        return tempTable
-    end
-    for _, v in ipairs(table2) do
-        table.insert(tempTable, v)
+    for _, tn in ipairs(tables) do
+        if (type(tn) == "table") then
+            for _, v in ipairs(tn) do
+                table.insert(tempTable, v)
+            end
+        end
     end
     return tempTable
 end

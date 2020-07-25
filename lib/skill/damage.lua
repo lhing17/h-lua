@@ -192,10 +192,9 @@ hskill.damage = function(options)
         damageStringColor = CONST_DAMAGE_TYPE_MAP.absolute.color
     end
     -- 计算回避 X 命中
-    if
-    (damageKind == CONST_DAMAGE_KIND.attack and targetUnitAttr.avoid - (sourceUnitAttr.aim or 0) > 0 and
-        math.random(1, 100) <= targetUnitAttr.avoid - (sourceUnitAttr.aim or 0))
-    then
+    if (damageKind == CONST_DAMAGE_KIND.attack
+        and targetUnitAttr.avoid - (sourceUnitAttr.aim or 0) > 0
+        and math.random(1, 100) <= targetUnitAttr.avoid - (sourceUnitAttr.aim or 0)) then
         isAvoid = true
         lastDamage = 0
         htextTag.style(htextTag.create2Unit(targetUnit, "回避", 6.00, "5ef78e", 10, 1.00, 10.00), "scale", 0, 0.2)
@@ -287,42 +286,59 @@ hskill.damage = function(options)
     -- 上面都是先行计算
     if (lastDamage > 0.125) then
         -- 设置单位正在受伤
-        if (hRuntime.attributeDamaging[targetUnit] ~= nil) then
-            htime.delTimer(hRuntime.attributeDamaging[targetUnit])
-            hRuntime.attributeDamaging[targetUnit] = nil
+        if (hRuntime.attributeBeDamaging[targetUnit] ~= nil) then
+            htime.delTimer(hRuntime.attributeBeDamaging[targetUnit])
+            hRuntime.attributeBeDamaging[targetUnit] = nil
         end
-        his.set(targetUnit, "isDamaging", true)
-        hRuntime.attributeDamaging[targetUnit] = htime.setTimeout(
-            2.5,
+        his.set(targetUnit, "isBeDamaging", true)
+        hRuntime.attributeBeDamaging[targetUnit] = htime.setTimeout(
+            3.5,
             function(t)
                 htime.delTimer(t)
-                hRuntime.attributeDamaging[targetUnit] = nil
-                his.set(targetUnit, "isDamaging", false)
+                hRuntime.attributeBeDamaging[targetUnit] = nil
+                his.set(targetUnit, "isBeDamaging", false)
             end
         )
+        if (sourceUnit ~= nil) then
+            if (hRuntime.attributeDamaging[targetUnit] ~= nil) then
+                htime.delTimer(hRuntime.attributeDamaging[targetUnit])
+                hRuntime.attributeDamaging[targetUnit] = nil
+            end
+            his.set(sourceUnit, "isDamaging", true)
+            hRuntime.attributeDamaging[sourceUnit] = htime.setTimeout(
+                3.5,
+                function(t)
+                    htime.delTimer(t)
+                    hRuntime.attributeDamaging[sourceUnit] = nil
+                    his.set(sourceUnit, "isDamaging", false)
+                end
+            )
+            hevent.setLastDamageUnit(targetUnit, sourceUnit)
+            hplayer.addDamage(hunit.getOwner(sourceUnit), lastDamage)
+        end
         -- 造成伤害及漂浮字
         _damageTtg(targetUnit, lastDamage, damageString, damageStringColor)
         --
-        hevent.setLastDamageUnit(targetUnit, sourceUnit)
-        hplayer.addDamage(cj.GetOwningPlayer(sourceUnit), lastDamage)
-        hplayer.addBeDamage(cj.GetOwningPlayer(targetUnit), lastDamage)
+        hplayer.addBeDamage(hunit.getOwner(targetUnit), lastDamage)
         hunit.subCurLife(targetUnit, lastDamage)
         if (type(effect) == "string" and string.len(effect) > 0) then
-            heffect.toXY(effect, cj.GetUnitX(targetUnit), cj.GetUnitY(targetUnit), 0)
+            heffect.toXY(effect, hunit.x(targetUnit), hunit.y(targetUnit), 0)
         end
         -- @触发伤害事件
-        hevent.triggerEvent(
-            sourceUnit,
-            CONST_EVENT.damage,
-            {
-                triggerUnit = sourceUnit,
-                targetUnit = targetUnit,
-                sourceUnit = sourceUnit,
-                damage = lastDamage,
-                damageKind = damageKind,
-                damageType = damageType
-            }
-        )
+        if (sourceUnit ~= nil) then
+            hevent.triggerEvent(
+                sourceUnit,
+                CONST_EVENT.damage,
+                {
+                    triggerUnit = sourceUnit,
+                    targetUnit = targetUnit,
+                    sourceUnit = sourceUnit,
+                    damage = lastDamage,
+                    damageKind = damageKind,
+                    damageType = damageType
+                }
+            )
+        end
         -- @触发被伤害事件
         hevent.triggerEvent(
             targetUnit,
@@ -336,25 +352,27 @@ hskill.damage = function(options)
             }
         )
         if (damageKind == CONST_DAMAGE_KIND.attack) then
-            -- @触发攻击事件
-            hevent.triggerEvent(
-                sourceUnit,
-                CONST_EVENT.attack,
-                {
-                    triggerUnit = sourceUnit,
-                    attacker = sourceUnit,
-                    targetUnit = targetUnit,
-                    damage = lastDamage,
-                    damageKind = damageKind,
-                    damageType = damageType
-                }
-            )
+            if (sourceUnit ~= nil) then
+                -- @触发攻击事件
+                hevent.triggerEvent(
+                    sourceUnit,
+                    CONST_EVENT.attack,
+                    {
+                        triggerUnit = sourceUnit,
+                        attacker = sourceUnit,
+                        targetUnit = targetUnit,
+                        damage = lastDamage,
+                        damageKind = damageKind,
+                        damageType = damageType
+                    }
+                )
+            end
             -- @触发被攻击事件
             hevent.triggerEvent(
                 targetUnit,
                 CONST_EVENT.beAttack,
                 {
-                    triggerUnit = sourceUnit,
+                    triggerUnit = targetUnit,
                     attacker = sourceUnit,
                     targetUnit = targetUnit,
                     damage = lastDamage,
@@ -435,18 +453,11 @@ hskill.damage = function(options)
         end
         -- 硬直
         local punish_during = 5.00
-        if
-        (lastDamage > 1 and his.alive(targetUnit) and his.punish(targetUnit) == false and
-            hunit.isOpenPunish(targetUnit))
-        then
-            hattr.set(
-                targetUnit,
-                0,
-                {
-                    punish_current = "-" .. lastDamage
-                }
-            )
-            if (targetUnitAttr.punish_current <= 0) then
+        if (lastDamage > 1 and his.alive(targetUnit) and his.punish(targetUnit) == false and hunit.isOpenPunish(targetUnit)) then
+            hattr.set(targetUnit, 0, {
+                punish_current = "-" .. lastDamage
+            })
+            if (targetUnitAttr.punish_current - lastDamage <= 0) then
                 his.set(targetUnit, "isPunishing", true)
                 htime.setTimeout(
                     punish_during + 1.00,
@@ -455,40 +466,36 @@ hskill.damage = function(options)
                         his.set(targetUnit, "isPunishing", false)
                     end
                 )
-            end
-            local punishEffectAttackSpeed = (100 + targetUnitAttr.attack_speed) * punishEffectRatio
-            local punishEffectMove = targetUnitAttr.move * punishEffectRatio
-            if (punishEffectAttackSpeed < 1) then
-                punishEffectAttackSpeed = 1.00
-            end
-            if (punishEffectMove < 1) then
-                punishEffectMove = 1.00
-            end
-            hattr.set(
-                targetUnit,
-                punish_during,
-                {
+                local punishEffectAttackSpeed = (100 + targetUnitAttr.attack_speed) * punishEffectRatio
+                local punishEffectMove = targetUnitAttr.move * punishEffectRatio
+                if (punishEffectAttackSpeed < 1) then
+                    punishEffectAttackSpeed = 1.00
+                end
+                if (punishEffectMove < 1) then
+                    punishEffectMove = 1.00
+                end
+                hattr.set(targetUnit, punish_during, {
                     attack_speed = "-" .. punishEffectAttackSpeed,
                     move = "-" .. punishEffectMove
-                }
-            )
-            htextTag.style(
-                htextTag.create2Unit(targetUnit, "僵硬", 6.00, "c0c0c0", 0, punish_during, 50.00),
-                "scale",
-                0,
-                0
-            )
-            -- @触发硬直事件
-            hevent.triggerEvent(
-                targetUnit,
-                CONST_EVENT.heavy,
-                {
-                    triggerUnit = targetUnit,
-                    sourceUnit = sourceUnit,
-                    percent = punishEffectRatio * 100,
-                    during = punish_during
-                }
-            )
+                })
+                htextTag.style(
+                    htextTag.create2Unit(targetUnit, "僵硬", 6.00, "c0c0c0", 0, punish_during, 50.00),
+                    "scale",
+                    0,
+                    0
+                )
+                -- @触发硬直事件
+                hevent.triggerEvent(
+                    targetUnit,
+                    CONST_EVENT.heavy,
+                    {
+                        triggerUnit = targetUnit,
+                        sourceUnit = sourceUnit,
+                        percent = punishEffectRatio * 100,
+                        during = punish_during
+                    }
+                )
+            end
         end
         -- 反伤
         if (sourceUnit ~= nil and his.invincible(sourceUnit) == false) then
@@ -496,6 +503,7 @@ hskill.damage = function(options)
             if (targetUnitDamageRebound > 0) then
                 local ldr = math.round(lastDamage * targetUnitDamageRebound * 0.01)
                 if (ldr > 0.01) then
+                    hevent.setLastDamageUnit(sourceUnit, targetUnit)
                     hunit.subCurLife(sourceUnit, ldr)
                     htextTag.style(
                         htextTag.create2Unit(sourceUnit, "反伤" .. ldr, 12.00, "f8aaeb", 10, 1.00, 10.00),
@@ -745,8 +753,81 @@ hskill.damage = function(options)
     end
 end
 
+--- 多频多段伤害
+--- 特别适用于例如中毒，灼烧等效果
 --[[
-    范围持续伤害
+    options = {
+        whichUnit = [unit], --受伤单位（必须有）
+        frequency = 0, --伤害频率（必须有）
+        times = 0, --伤害次数（必须有）
+        effect = "", --特效（可选）
+        damage = 0, --单次伤害（大于0）
+        sourceUnit = [unit], --伤害来源单位（可选）
+        damageKind = CONST_DAMAGE_KIND.skill --伤害的种类（可选）
+        damageType = {CONST_DAMAGE_TYPE.real} --伤害的类型,注意是table（可选）
+        extraInfluence = [function],
+    }
+]]
+hskill.damageStep = function(options)
+    local times = options.times or 0
+    local frequency = options.frequency or 0
+    local damage = options.damage or 0
+    if (options.whichUnit == nil) then
+        print_err("hskill.damageRange:-whichUnit")
+        return
+    end
+    if (times <= 0 or damage <= 0) then
+        print_err("hskill.damageRange:-times -damage")
+        return
+    end
+    if (times > 1 and frequency <= 0) then
+        print_err("hskill.damageRange:-frequency")
+        return
+    end
+    if (times <= 1) then
+        hskill.damage(
+            {
+                sourceUnit = options.sourceUnit,
+                targetUnit = options.whichUnit,
+                effect = options.effect,
+                damage = damage,
+                damageKind = options.damageKind,
+                damageType = options.damageType
+            }
+        )
+        if (type(options.extraInfluence) == "function") then
+            options.extraInfluence(eu)
+        end
+    else
+        local ti = 0
+        htime.setInterval(
+            frequency,
+            function(t)
+                ti = ti + 1
+                if (ti > times) then
+                    htime.delTimer(t)
+                    return
+                end
+                hskill.damage(
+                    {
+                        sourceUnit = options.sourceUnit,
+                        targetUnit = options.whichUnit,
+                        effect = options.effect,
+                        damage = damage,
+                        damageKind = options.damageKind,
+                        damageType = options.damageType
+                    }
+                )
+                if (type(options.extraInfluence) == "function") then
+                    options.extraInfluence(eu)
+                end
+            end
+        )
+    end
+end
+
+--- 范围持续伤害
+--[[
     options = {
         range = 0, --范围（必须有）
         frequency = 0, --伤害频率（必须有）
@@ -783,8 +864,8 @@ hskill.damageRange = function(options)
         x = options.x
         y = options.y
     elseif (options.whichUnit ~= nil) then
-        x = cj.GetUnitX(options.whichUnit)
-        y = cj.GetUnitY(options.whichUnit)
+        x = hunit.x(options.whichUnit)
+        y = hunit.y(options.whichUnit)
     elseif (options.whichLoc ~= nil) then
         x = cj.GetLocatonX(options.whichLoc)
         y = cj.GetLocatonY(options.whichLoc)

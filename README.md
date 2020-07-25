@@ -1,22 +1,21 @@
- * [github网址](https://github.com/hunzsig-warcraft3/h-lua)
+ * [github地址](https://github.com/hunzsig-warcraft3/h-lua)
+ * [开源地图：HelloWorld](https://github.com/hunzsig-warcraft3/w3x-h-lua-helloworld)
  * [开源地图：我塔非凡](https://github.com/hunzsig-warcraft3/w3x-my-tower)
  * [功能测试：DZAPI](https://github.com/hunzsig-warcraft3/w3x-test-dzapi)
  * [功能测试：崩溃压力](https://github.com/hunzsig-warcraft3/w3x-test-breakdown)
  * [极速上手文档](https://docs.qq.com/doc/DTUZZZWZzYVpyeW1o)
- * author hunzsig
- * QQ 325338043
+ * Author：hunzsig
+ * QQ：325338043
 
-# 使用优势？
-h-lua拥有优秀的demo，在开源的同时引导您学习的更多，不依赖任何游戏平台（如JAPI、DzAPI）
-但并不禁止你使用(有集成DzAPI)。
+## 使用优势？
+h-lua拥有优秀的demo，在开源的同时引导您学习的更多，不依赖其他API（如JAPI、DzAPI），并集成少量的DzAPI。
 包含多样丰富的属性系统，内置多达几十种以上的自定义事件,可以轻松做出平时难以甚至不能做出的技能效果。
 强大的物品合成分拆，丰富自定义技能模板！免去自行编写！
 计时器、环境、镜头、单位、敌人、音乐、天气、遮罩、任务等等应有尽有。
 
-#### 框架结构如下：
+## 框架结构如下：
 ```
     ├── h-lua.lua - 入口文件，你的main文件需要包含它
-    ├── ui - UI界面
     ├── const - 静态值
     │   ├── attritube - 属性
     │   ├── breakArmorType - 破防类型
@@ -29,7 +28,6 @@ h-lua拥有优秀的demo，在开源的同时引导您学习的更多，不依�
     │   ├── playerColor - 玩家颜色
     │   └── unit - 单位
     ├── foundation - 基础文件
-    │   ├── foundation - 基础文件
     │   ├── blizzard_b.lua - 暴雪B全局变量
     │   ├── blizzard_c.lua - 暴雪C全局变量
     │   ├── blizzard_bj.lua - 暴雪部分BJ函数，实际无用，非要用bj就自行拓展编写载入
@@ -81,18 +79,22 @@ h-lua拥有优秀的demo，在开源的同时引导您学习的更多，不依�
         └── init.jass - 需要在触发编辑器加载的文件，用于初始化及调用lua-exec
 ```
 
-提醒：
-### 本套代码免费提供给了解lua的作者试用，如果不了解lua语言请使用T来制作地图或自行学习，此处不提供教学
+> 本套代码免费提供给了解lua的作者试用，如果不了解lua语言请使用T来制作地图或自行学习，此处不提供教学，本教程以YDWE为例
 
-> 以下教程以YDWE为例
 ## 前期准备：
-### 打开 YWDE【设置】的lua引擎 
-### 只需要关闭 YWDE的“逆天”触发
 
-## 好了，让我们开始接入：
-### 打开 YDWE 打开地图按F4打开触发编辑器
-### 在最上方第一的位置添加一个【新触发】
-### 选中新建的触发点击菜单【编辑】将他转为自定义文本，替换成你的代码，如下：
+> 记得打开 YDWE【设置】的lua引擎
+
+> 编辑器设置可查看极速上手参考
+
+### 好了，让我们开始接入：
+
+> 打开 YDWE 打开地图按F4打开触发编辑器
+
+> 在最上方第一的位置添加一个【新触发】
+
+> 选中新建的触发点击菜单【编辑】将他转为自定义文本，替换成你的代码，如下：
+
 ```
 <?
 #include "[YOUR PATH]/h-lua/slk/helper.lua"
@@ -105,8 +107,10 @@ import("main.lua") ("hot.lua", true)
 
 > 上线打包package用 import("main.lua") ("dist.lua", true)
 
-> 注意：
+```
+注意：
 h-lua库开源，不定时更新，可访问 http://hlua.book.hunzsig.org 查看最新文档
 h-lua库仅提供一些功能函数协助做图作者更加轻松制作地图
 h-lua库不保证完全正确且无bug，如有需要，请自行修改源码进行游戏制作，这里不过是提供思路与帮助
 由于h-lua使用了slk，保存时会自动帮助你生成框架需要的所有物编，所以无需自行构建物编
+```

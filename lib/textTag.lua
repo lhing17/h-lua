@@ -95,7 +95,7 @@ end
 ---@param zOffset number z轴高度偏移量
 ---@return userdata
 htextTag.create2Unit = function(u, msg, size, color, opacity, during, zOffset)
-    return htextTag.create2XY(cj.GetUnitX(u), cj.GetUnitY(u), msg, size, color, opacity, during, zOffset)
+    return htextTag.create2XY(hunit.x(u), hunit.y(u), msg, size, color, opacity, during, zOffset)
 end
 --- 漂浮文字 - 默认 (在某点上)
 ---@param loc userdata
@@ -144,7 +144,7 @@ htextTag.createFollowUnit = function(u, msg, size, color, opacity, during, zOffs
             elseif (hcamera.model == "zoomout") then
                 scale = 1
             end
-            cj.SetTextTagPos(ttg, cj.GetUnitX(u) - cj.StringLength(txt) * size * scale, cj.GetUnitY(u), zOffset)
+            cj.SetTextTagPos(ttg, hunit.x(u) - cj.StringLength(txt) * size * scale, hunit.y(u), zOffset)
             if (his.alive(u) == true) then
                 cj.SetTextTagVisibility(ttg, true)
             else
@@ -247,10 +247,10 @@ htextTag.style = function(ttg, showType, xSpeed, ySpeed)
     elseif (showType == "toggle") then
         -- 放大再缩小
         local tnow = 0
-        local tend1 = tend * 0.2
-        local tend2 = tend * 0.2
+        local tend1 = tend * 0.1
+        local tend2 = tend * 0.25
         local tend3 = tend - tend1 - tend2
-        local scale = tend * 0.0022
+        local scale = tend * 0.002
         htime.setInterval(
             0.03,
             function(t)

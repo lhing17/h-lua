@@ -63,11 +63,13 @@ print_stack = function(...)
 end
 
 --- 打印utf8->ansi编码,此方法可以打印出中文
-print_mb = function(str)
+print_mb = function(...)
     if (HLUA_DEBUG == false) then
         return
     end
-    console.write(str)
+    for _, str in ipairs({ ... }) do
+        console.write(str)
+    end
 end
 
 --- 错误调试

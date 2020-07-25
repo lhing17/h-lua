@@ -86,8 +86,8 @@ heffect.toUnit = function(effectModel, targetUnit, during)
         return
     end
     local eff
-    local x = cj.GetUnitX(targetUnit)
-    local y = cj.GetUnitY(targetUnit)
+    local x = hunit.x(targetUnit)
+    local y = hunit.y(targetUnit)
     if (during > 0) then
         eff = cj.AddSpecialEffect(effectModel, x, y)
         htime.setTimeout(

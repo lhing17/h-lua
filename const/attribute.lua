@@ -102,11 +102,11 @@ CONST_ATTR = {
     natural_insect_oppose = "自然虫抗",
     natural_god_oppose = "自然神抗",
     --
-    attack_buff = "攻击增益",
-    attack_debuff = "负面攻击",
-    skill_buff = "技能增益",
-    skill_debuff = "负面技能",
-    attack_effect = "攻击特效",
+    attack_buff = "平攻强化效果",
+    attack_debuff = "平攻削敌效果",
+    attack_effect = "平攻特效",
+    skill_buff = "技能强化效果",
+    skill_debuff = "技能削敌效果",
     skill_effect = "技能特效",
     --
     knocking = "物理暴击",

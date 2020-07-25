@@ -1,6 +1,7 @@
 ?>
 globals
     hashtable hash_hslk = null
+    hashtable hash_hslk_helper = null
 endglobals
 
 library zzzSlk initializer Init
@@ -12,8 +13,9 @@ library zzzSlk initializer Init
         local integer vi = 0
         //slk注册
         set hash_hslk = InitHashtable()
+        set hash_hslk_helper = InitHashtable()
         <?
-        for _,v in ipairs(tempData)do
+        for _,v in ipairs(slkHashData)do
             local key1 = v[1]
             local key2 = v[2]
             local val = v[3]
@@ -32,10 +34,43 @@ library zzzSlk initializer Init
                 <?
             end
             if(t == "str")then
-                ?>call SaveStr(hash_hslk, <?=key1?>, <?=key2?>, vs)<?
+                ?>
+                call SaveStr(hash_hslk, <?=key1?>, <?=key2?>, vs)
+                <?
             elseif(t == "int")then
-                ?>call SaveInteger(hash_hslk, <?=key1?>, <?=key2?>, vi)<?
+                ?>
+                call SaveInteger(hash_hslk, <?=key1?>, <?=key2?>, vi)
+                <?
             end
+        end
+        local hi = { 0, 0, 0, 0 }
+        for _,v in ipairs(slkHelperHashData)do
+            if(v.type == "item")then
+                hi[1] = hi[1] + 1
+                ?>
+                call SaveStr(hash_hslk_helper, 1, <?=hi[1]?>, "<?=string.addslashes(json.stringify(v.data))?>")
+                <?
+            elseif(v.type == "unit")then
+                hi[2] = hi[2] + 1
+                ?>
+                call SaveStr(hash_hslk_helper, 2, <?=hi[2]?>, "<?=string.addslashes(json.stringify(v.data))?>")
+                <?
+            elseif(v.type == "ability")then
+                hi[3] = hi[3] + 1
+                ?>
+                call SaveStr(hash_hslk_helper, 3, <?=hi[3]?>, "<?=string.addslashes(json.stringify(v.data))?>")
+                <?
+            elseif(v.type == "technology")then
+                hi[4] = hi[4] + 1
+                ?>
+                call SaveStr(hash_hslk_helper, 4, <?=hi[4]?>, "<?=string.addslashes(json.stringify(v.data))?>")
+                <?
+            end
+        end
+        for i,v in ipairs(hi)do
+            ?>
+            call SaveInteger(hash_hslk_helper, 0, <?=i?>, <?=v?>)
+            <?
         end
         ?>
         //exec

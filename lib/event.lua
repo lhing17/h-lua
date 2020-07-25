@@ -32,12 +32,26 @@ end
 --- 触发池
 --- 使用一个handle，以不同的conditionAction累计计数
 --- 分配触发到回调注册
+--- 触发池的action是不会被同一个handle注册两次的，与on事件并不相同
 ---@protected
 hevent.pool = function(handle, conditionAction, regEvent)
     if (type(regEvent) ~= 'function') then
         return
     end
     local key = cj.GetHandleId(conditionAction)
+    -- 如果这个handle已经注册过此动作，则不重复注册
+    if (hRuntime.event.pool[handle] ~= nil) then
+        local isInPool = false
+        for _, p in ipairs(hRuntime.event.pool[handle]) do
+            if p.key == key then
+                isInPool = true
+                break
+            end
+        end
+        if (isInPool) then
+            return
+        end
+    end
     if (hevent.POOL[key] == nil) then
         hevent.POOL[key] = {}
     end
@@ -182,7 +196,7 @@ hevent.onAttack = function(whichUnit, callFunc)
 end
 
 --- 承受攻击
----@alias onBeAttack fun(evtData: {triggerUnit:"被攻击单位",attacker:"攻击来源",damage:"伤害",damageKind:"伤害方式",damageType:"伤害类型"}):void
+---@alias onBeAttack fun(evtData: {triggerUnit:"被攻击单位",targetUnit:"被攻击单位",attacker:"攻击来源",damage:"伤害",damageKind:"伤害方式",damageType:"伤害类型"}):void
 ---@param whichUnit userdata
 ---@param callFunc onBeAttack | "function(evtData) end"
 ---@return any
@@ -323,7 +337,7 @@ end
 
 --- 物品被破坏
 ---@alias onItemDestroy fun(evtData: {triggerUnit:"触发单位",triggerItem:"触发物品"}):void
----@param whichUnit userdata
+---@param whichItem userdata
 ---@param callFunc onItemDestroy | "function(evtData) end"
 ---@return any
 hevent.onItemDestroy = function(whichItem, callFunc)
@@ -791,30 +805,29 @@ end
 ---@return any
 hevent.onEnterUnitRange = function(whichUnit, range, callFunc)
     local key = CONST_EVENT.enterUnitRange
-    if (hRuntime.event.trigger[whichUnit] == nil) then
-        hRuntime.event.trigger[whichUnit] = {}
+    if (hRuntime.unit[whichUnit] == nil) then
+        hRuntime.unit[whichUnit] = {}
     end
-    if (hRuntime.event.trigger[whichUnit][key] == nil) then
-        hRuntime.event.trigger[whichUnit][key] = cj.CreateTrigger()
-        cj.TriggerRegisterUnitInRange(
-            hRuntime.event.trigger[whichUnit][key],
-            whichUnit, range, nil
-        )
-        cj.TriggerAddAction(
-            hRuntime.event.trigger[whichUnit][key],
-            function()
-                hevent.triggerEvent(
-                    whichUnit,
-                    key,
-                    {
-                        centerUnit = whichUnit,
-                        enterUnit = cj.GetTriggerUnit(),
-                        range = range
-                    }
-                )
-            end
-        )
+    if (hRuntime.unit[whichUnit]["onEnterUnitRangeAction" .. range] == nil) then
+        hRuntime.unit[whichUnit]["onEnterUnitRangeAction" .. range] = function()
+            hevent.triggerEvent(
+                whichUnit,
+                key,
+                {
+                    centerUnit = whichUnit,
+                    enterUnit = cj.GetTriggerUnit(),
+                    range = range
+                }
+            )
+        end
     end
+    hevent.pool(
+        whichUnit,
+        cj.Condition(hRuntime.unit[whichUnit]["onEnterUnitRangeAction" .. range]),
+        function(tgr)
+            cj.TriggerRegisterUnitInRange(tgr, whichUnit, range, nil)
+        end
+    )
     return hevent.registerEvent(whichUnit, key, callFunc)
 end
 
@@ -825,28 +838,30 @@ end
 ---@return any
 hevent.onEnterRect = function(whichRect, callFunc)
     local key = CONST_EVENT.enterRect
-    if (hRuntime.event.trigger[whichRect] == nil) then
-        hRuntime.event.trigger[whichRect] = {}
+    if (hRuntime.rect[whichRect] == nil) then
+        hRuntime.rect[whichRect] = {}
     end
-    if (hRuntime.event.trigger[whichRect][key] == nil) then
-        hRuntime.event.trigger[whichRect][key] = cj.CreateTrigger()
-        local rectRegion = cj.CreateRegion()
-        cj.RegionAddRect(rectRegion, whichRect)
-        cj.TriggerRegisterEnterRegion(hRuntime.event.trigger[whichRect][key], rectRegion, nil)
-        cj.TriggerAddAction(
-            hRuntime.event.trigger[whichRect][key],
-            function()
-                hevent.triggerEvent(
-                    whichRect,
-                    key,
-                    {
-                        triggerRect = whichRect,
-                        triggerUnit = cj.GetTriggerUnit()
-                    }
-                )
-            end
-        )
+    if (hRuntime.rect[whichRect].onEnterRectAction == nil) then
+        hRuntime.rect[whichRect].onEnterRectAction = function()
+            hevent.triggerEvent(
+                whichRect,
+                key,
+                {
+                    triggerRect = whichRect,
+                    triggerUnit = cj.GetTriggerUnit()
+                }
+            )
+        end
     end
+    hevent.pool(
+        whichRect,
+        cj.Condition(hRuntime.rect[whichRect].onEnterRectAction),
+        function(tgr)
+            local rectRegion = cj.CreateRegion()
+            cj.RegionAddRect(rectRegion, whichRect)
+            cj.TriggerRegisterEnterRegion(tgr, rectRegion, nil)
+        end
+    )
     return hevent.registerEvent(whichRect, key, callFunc)
 end
 
@@ -857,28 +872,30 @@ end
 ---@return any
 hevent.onLeaveRect = function(whichRect, callFunc)
     local key = CONST_EVENT.leaveRect
-    if (hRuntime.event.trigger[whichRect] == nil) then
-        hRuntime.event.trigger[whichRect] = {}
+    if (hRuntime.rect[whichRect] == nil) then
+        hRuntime.rect[whichRect] = {}
     end
-    if (hRuntime.event.trigger[whichRect][key] == nil) then
-        hRuntime.event.trigger[whichRect][key] = cj.CreateTrigger()
-        local rectRegion = cj.CreateRegion()
-        cj.RegionAddRect(rectRegion, whichRect)
-        cj.TriggerRegisterLeaveRegion(hRuntime.event.trigger[whichRect][key], rectRegion, nil)
-        cj.TriggerAddAction(
-            hRuntime.event.trigger[whichRect][key],
-            function()
-                hevent.triggerEvent(
-                    whichRect,
-                    key,
-                    {
-                        triggerRect = whichRect,
-                        triggerUnit = cj.GetTriggerUnit()
-                    }
-                )
-            end
-        )
+    if (hRuntime.rect[whichRect].onLeaveRectAction == nil) then
+        hRuntime.rect[whichRect].onLeaveRectAction = function()
+            hevent.triggerEvent(
+                whichRect,
+                key,
+                {
+                    triggerRect = whichRect,
+                    triggerUnit = cj.GetTriggerUnit()
+                }
+            )
+        end
     end
+    hevent.pool(
+        whichRect,
+        cj.Condition(hRuntime.rect[whichRect].onLeaveRectAction),
+        function(tgr)
+            local rectRegion = cj.CreateRegion()
+            cj.RegionAddRect(rectRegion, whichRect)
+            cj.TriggerRegisterLeaveRegion(tgr, rectRegion, nil)
+        end
+    )
     return hevent.registerEvent(whichRect, key, callFunc)
 end
 
@@ -930,27 +947,25 @@ hevent.onChat = function(whichPlayer, chatStr, matchAll, callFunc)
     if (matchAll) then
         key = CONST_EVENT.chat .. chatStr .. '|T'
     end
-    if (hRuntime.event.trigger[whichPlayer] == nil) then
-        hRuntime.event.trigger[whichPlayer] = {}
+    if (hRuntime.player[whichPlayer] == nil) then
+        hRuntime.player[whichPlayer] = {}
     end
-    if (hRuntime.event.trigger[whichPlayer][key] == nil) then
-        hRuntime.event.trigger[whichPlayer][key] = cj.CreateTrigger()
-        cj.TriggerRegisterPlayerChatEvent(hRuntime.event.trigger[whichPlayer][key], whichPlayer, chatStr, matchAll)
-        cj.TriggerAddAction(
-            hRuntime.event.trigger[whichPlayer][key],
-            function()
-                hevent.triggerEvent(
-                    cj.GetTriggerPlayer(),
-                    key,
-                    {
-                        triggerPlayer = cj.GetTriggerPlayer(),
-                        chatString = cj.GetEventPlayerChatString(),
-                        matchedString = cj.GetEventPlayerChatStringMatched()
-                    }
-                )
-            end
-        )
+    if (hRuntime.player[whichPlayer][key] == nil) then
+        hRuntime.player[whichPlayer][key] = function()
+            hevent.triggerEvent(
+                cj.GetTriggerPlayer(),
+                key,
+                {
+                    triggerPlayer = cj.GetTriggerPlayer(),
+                    chatString = cj.GetEventPlayerChatString(),
+                    matchedString = cj.GetEventPlayerChatStringMatched()
+                }
+            )
+        end
     end
+    hevent.pool(whichPlayer, cj.Condition(hRuntime.player[whichPlayer][key]), function(tgr)
+        cj.TriggerRegisterPlayerChatEvent(tgr, whichPlayer, chatStr, matchAll)
+    end)
     return hevent.registerEvent(whichPlayer, key, callFunc)
 end
 
@@ -973,47 +988,7 @@ end
 ---@param callFunc onSelection | "function(evtData) end"
 ---@return any
 hevent.onSelection = function(whichPlayer, qty, callFunc)
-    local key = CONST_EVENT.selection .. "#" .. qty
-    if (hRuntime.event.trigger[whichPlayer] == nil) then
-        hRuntime.event.trigger[whichPlayer] = {}
-    end
-    if (hRuntime.event.trigger[whichPlayer][key] == nil) then
-        hRuntime.event.trigger[whichPlayer][key] = {
-            click = 0,
-            trigger = cj.CreateTrigger(),
-        }
-        cj.TriggerRegisterPlayerUnitEvent(
-            hRuntime.event.trigger[whichPlayer][key].trigger,
-            whichPlayer, EVENT_PLAYER_UNIT_SELECTED, nil
-        )
-        cj.TriggerAddAction(
-            hRuntime.event.trigger[whichPlayer][key].trigger,
-            function()
-                local triggerPlayer = cj.GetTriggerPlayer()
-                local triggerUnit = cj.GetTriggerUnit()
-                hRuntime.event.trigger[triggerPlayer][key].click = hRuntime.event.trigger[triggerPlayer][key].click + 1
-                htime.setTimeout(
-                    0.3,
-                    function(t)
-                        htime.delTimer(t)
-                        hRuntime.event.trigger[triggerPlayer][key].click = hRuntime.event.trigger[triggerPlayer][key].click - 1
-                    end
-                )
-                if (hRuntime.event.trigger[triggerPlayer][key].click >= qty) then
-                    hevent.triggerEvent(
-                        triggerPlayer,
-                        key,
-                        {
-                            triggerPlayer = triggerPlayer,
-                            triggerUnit = triggerUnit,
-                            qty = qty
-                        }
-                    )
-                end
-            end
-        )
-    end
-    return hevent.registerEvent(whichPlayer, key, callFunc)
+    return hevent.registerEvent(whichPlayer, CONST_EVENT.selection .. "#" .. qty, callFunc)
 end
 
 --- 玩家取消选择单位
@@ -1041,5 +1016,32 @@ end
 ---@param callFunc onPickHero | "function(evtData) end"
 ---@return any
 hevent.onPickHero = function(callFunc)
-    return hevent.onEventByHandle("global", CONST_EVENT.pickHero, callFunc)
+    return hevent.registerEvent("global", CONST_EVENT.pickHero, callFunc)
+end
+
+--- 可破坏物死亡
+---@alias onDestructableDestroy fun(evtData: {triggerDestructable:"被破坏的可破坏物"}):void
+---@param whichDestructable userdata
+---@param callFunc onDestructableDestroy | "function(evtData) end"
+---@return any
+hevent.onDestructableDestroy = function(whichDestructable, callFunc)
+    hevent.pool(whichDestructable, hevent_default_actions.destructable.destroy, function(tgr)
+        cj.TriggerRegisterDeathEvent(tgr, whichDestructable)
+    end)
+    return hevent.registerEvent(whichDestructable, CONST_EVENT.destructableDestroy, callFunc)
+end
+
+--- 全图当前可破坏物死亡
+---@alias onMapDestructableDestroy fun(evtData: {triggerDestructable:"被破坏的可破坏物"}):void
+---@param whichDestructable userdata
+---@param callFunc onMapDestructableDestroy | "function(evtData) end"
+---@return any
+hevent.onMapDestructableDestroy = function(callFunc)
+    local tgr = cj.CreateTrigger()
+    cj.TriggerAddCondition(tgr, cj.Condition(function()
+        callFunc({ triggerDestructable = cj.GetTriggerDestructable() })
+    end))
+    cj.EnumDestructablesInRect(hrect.MAP_INITIAL_PLAYABLE_AREA, nil, function()
+        cj.TriggerRegisterDeathEvent(tgr, cj.GetEnumDestructable())
+    end)
 end
